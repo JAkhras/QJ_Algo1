@@ -10,7 +10,7 @@ namespace QJExternalTool
     {
 
         private const string ConnectionString =
-            "Data Source=h98ohmld2f.database.windows.net;Initial Catalog = QJTraderCandlesticks; Integrated Security = False; User ID = JMSXTech; Password=********;Connect Timeout = 60; Encrypt=False;TrustServerCertificate=False;ApplicationIntent=ReadWrite;MultiSubnetFailover=False";
+            "Data Source=h98ohmld2f.database.windows.net;Initial Catalog = QJTraderCandlesticks; Integrated Security = False; User ID = JMSXTech; Password=jmsx!2014;Connect Timeout = 60; Encrypt=False;TrustServerCertificate=False;ApplicationIntent=ReadWrite;MultiSubnetFailover=False";
 
         public enum Point
         {

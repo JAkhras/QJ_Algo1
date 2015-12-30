@@ -26,46 +26,43 @@
 		/// </summary>
 		private void InitializeComponent()
 		{
-            tbxAll = new System.Windows.Forms.TextBox();
-            txbAccounts = new System.Windows.Forms.TextBox();
-            SuspendLayout();
+            this.tbxAll = new System.Windows.Forms.TextBox();
+            this.txbAccounts = new System.Windows.Forms.TextBox();
+            this.SuspendLayout();
             // 
             // tbxAll
             // 
-            tbxAll.BackColor = System.Drawing.Color.White;
-            tbxAll.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            tbxAll.Location = new System.Drawing.Point(20, 61);
-            tbxAll.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
-            tbxAll.Multiline = true;
-            tbxAll.Name = "tbxAll";
-            tbxAll.ReadOnly = true;
-            tbxAll.Size = new System.Drawing.Size(529, 558);
-            tbxAll.TabIndex = 46;
+            this.tbxAll.BackColor = System.Drawing.Color.White;
+            this.tbxAll.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.tbxAll.Location = new System.Drawing.Point(13, 40);
+            this.tbxAll.Multiline = true;
+            this.tbxAll.Name = "tbxAll";
+            this.tbxAll.ReadOnly = true;
+            this.tbxAll.Size = new System.Drawing.Size(354, 313);
+            this.tbxAll.TabIndex = 46;
             // 
             // txbAccounts
             // 
-            txbAccounts.BackColor = System.Drawing.Color.White;
-            txbAccounts.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            txbAccounts.Location = new System.Drawing.Point(20, 651);
-            txbAccounts.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
-            txbAccounts.Multiline = true;
-            txbAccounts.Name = "txbAccounts";
-            txbAccounts.ReadOnly = true;
-            txbAccounts.Size = new System.Drawing.Size(522, 86);
-            txbAccounts.TabIndex = 48;
+            this.txbAccounts.BackColor = System.Drawing.Color.White;
+            this.txbAccounts.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.txbAccounts.Location = new System.Drawing.Point(13, 377);
+            this.txbAccounts.Multiline = true;
+            this.txbAccounts.Name = "txbAccounts";
+            this.txbAccounts.ReadOnly = true;
+            this.txbAccounts.Size = new System.Drawing.Size(349, 103);
+            this.txbAccounts.TabIndex = 48;
             // 
             // TestTool
             // 
-            AutoScaleDimensions = new System.Drawing.SizeF(9F, 20F);
-            AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            ClientSize = new System.Drawing.Size(562, 822);
-            Controls.Add(txbAccounts);
-            Controls.Add(tbxAll);
-            Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
-            Name = "TestTool";
-            Text = "TestTool";
-            ResumeLayout(false);
-            PerformLayout();
+            this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
+            this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
+            this.ClientSize = new System.Drawing.Size(375, 534);
+            this.Controls.Add(this.txbAccounts);
+            this.Controls.Add(this.tbxAll);
+            this.Name = "TestTool";
+            this.Text = "TestTool";
+            this.ResumeLayout(false);
+            this.PerformLayout();
 
 		}
 

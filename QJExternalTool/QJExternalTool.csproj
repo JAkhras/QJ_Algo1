@@ -32,20 +32,17 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="QJ.Common">
-      <HintPath>..\..\QJ.Common.dll</HintPath>
+      <HintPath>..\..\..\..\..\..\QJTrader\QJ.Common.dll</HintPath>
     </Reference>
     <Reference Include="QJ.Data">
-      <HintPath>..\..\QJ.Data.dll</HintPath>
+      <HintPath>..\..\..\..\..\..\QJTrader\QJ.Data.dll</HintPath>
     </Reference>
     <Reference Include="QJ.TradingManager">
-      <HintPath>..\..\QJ.TradingManager.dll</HintPath>
-    </Reference>
-    <Reference Include="QJ.UserPosition">
-      <HintPath>..\..\QJ.UserPosition.dll</HintPath>
+      <HintPath>..\..\..\..\..\..\QJTrader\QJ.TradingManager.dll</HintPath>
     </Reference>
     <Reference Include="QJInterface, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>bin\Debug\QJInterface.dll</HintPath>
+      <HintPath>..\..\..\..\..\..\QJTrader\QJInterface.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
@@ -76,24 +73,6 @@
     </EmbeddedResource>
   </ItemGroup>
   <ItemGroup>
-    <COMReference Include="Microsoft.Office.Core">
-      <Guid>{2DF8D04C-5BFA-101B-BDE5-00AA0044DE52}</Guid>
-      <VersionMajor>2</VersionMajor>
-      <VersionMinor>7</VersionMinor>
-      <Lcid>0</Lcid>
-      <WrapperTool>primary</WrapperTool>
-      <Isolated>False</Isolated>
-      <EmbedInteropTypes>True</EmbedInteropTypes>
-    </COMReference>
-    <COMReference Include="Microsoft.Office.Interop.Excel">
-      <Guid>{00020813-0000-0000-C000-000000000046}</Guid>
-      <VersionMajor>1</VersionMajor>
-      <VersionMinor>8</VersionMinor>
-      <Lcid>0</Lcid>
-      <WrapperTool>primary</WrapperTool>
-      <Isolated>False</Isolated>
-      <EmbedInteropTypes>True</EmbedInteropTypes>
-    </COMReference>
     <COMReference Include="VBIDE">
       <Guid>{0002E157-0000-0000-C000-000000000046}</Guid>
       <VersionMajor>5</VersionMajor>
