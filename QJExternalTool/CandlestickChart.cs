@@ -36,7 +36,7 @@ namespace QJExternalTool
 
             var connection = new SqlConnection(ConnectionString);
 
-            var command = new SqlCommand("SELECT Open, Close, High, Low, Frequency FROM " + _product + ";")
+            var command = new SqlCommand("SELECT O, C, H, L, Frequency FROM " + _product + ";")
             {
                 CommandType = CommandType.Text
             };
@@ -143,7 +143,7 @@ namespace QJExternalTool
             foreach (var candlestick in NewCandlesticks)
             {
                 stringBuilder.Append("INSERT INTO " + _product +
-                                     " (Open, Close, High, Low, Frequency) VALUES (" + candlestick.Open + ", " + candlestick.Close + ", " + candlestick.High + ", "+ candlestick.Low + ", " + candlestick.Frequency +");");
+                                     " (O, C, H, L, Frequency) VALUES (" + candlestick.Open + ", " + candlestick.Close + ", " + candlestick.High + ", "+ candlestick.Low + ", " + candlestick.Frequency +");");
             }
 
             var connection = new SqlConnection(ConnectionString);

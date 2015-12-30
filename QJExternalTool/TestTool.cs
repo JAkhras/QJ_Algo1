@@ -1,5 +1,6 @@
 ﻿#region using
 using System;
+using System.Globalization;
 using System.Windows.Forms;
 using QJInterface;
 #endregion
@@ -37,7 +38,7 @@ namespace QJExternalTool
         private int _lastVolume;
 
 	    //Candlestick stuff
-        private const string Product = "/ES H6.CME";
+        private const string Product = "/CGB H6.ME";
 
         private readonly Timer _timer;
 	    private int _frequency;
@@ -88,7 +89,7 @@ namespace QJExternalTool
             _level1 = _host.GetLevel1(Product);
             _level1.Level1Changed += Level1_Level1Changed;
 
-            _candlestickChart = new CandlestickChart(Product);
+            _candlestickChart = new CandlestickChart("ES_H6_CME");
 
             _stopCoefficient = _position.NetVolume != 0 ? 1 : 0;
 
@@ -113,11 +114,16 @@ namespace QJExternalTool
             _sellStop = 0;
             _sellLimit = 0;
 
-		}
+            tbxAll.Text += "\n" + "Initialized";
+
+        }
 
 	    private void TimerOnTick(object sender, EventArgs eventArgs)
 	    {
-	        _frequency += 5;
+            tbxAll.Text += "\n" + "Tick";
+
+
+            _frequency += 5;
 
             if (_currentCandlestick5.IsNull)
                 _candlestickChart.Candlesticks5.RemoveAt(_candlestickChart.Candlesticks5.Count-1);
@@ -155,6 +161,7 @@ namespace QJExternalTool
 	    #endregion
 
 		#region Level1_Level1Changed()
+
 		// This function is call when the information in the SymbolLevel1 changed.
 	    private void Level1_Level1Changed(ILevel1 level1)
 		{
@@ -167,7 +174,8 @@ namespace QJExternalTool
             //updating candlestick
 		    if (_lastVolume == volume) return;
 		    _lastVolume = volume;
-		    var last = level1.Last;
+            tbxAll.AppendText(_currentCandlestick5.High.ToString(CultureInfo.InvariantCulture));
+            var last = level1.Last;
 		    _currentCandlestick5.Update(last);
 		    _currentCandlestick15.Update(last);
 		    _currentCandlestick60.Update(last);
