@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.SqlClient;
@@ -50,6 +51,7 @@ namespace QJExternalTool
             Candlesticks5 = new List<Candlestick>();
             Candlesticks15 = new List<Candlestick>();
             Candlesticks60 = new List<Candlestick>();
+            NewCandlesticks = new List<Candlestick>();
 
             while (reader.Read())
             {
@@ -57,17 +59,25 @@ namespace QJExternalTool
 
                 var candlestick = new Candlestick(frequency)
                 {
-                    Open = reader.GetDecimal(reader.GetOrdinal("Open")),
-                    Close = reader.GetDecimal(reader.GetOrdinal("Close")),
-                    High = reader.GetDecimal(reader.GetOrdinal("High")),
-                    Low = reader.GetDecimal(reader.GetOrdinal("Low"))
+                    Frequency = frequency,
+                    Open = reader.GetDecimal(reader.GetOrdinal("O")),
+                    Close = reader.GetDecimal(reader.GetOrdinal("C")),
+                    High = reader.GetDecimal(reader.GetOrdinal("H")),
+                    Low = reader.GetDecimal(reader.GetOrdinal("L"))
                 };
 
-                Candlesticks5.Add(candlestick);
-                if (frequency >= 15)
-                    Candlesticks15.Add(candlestick);
-                if (frequency == 60)
-                    Candlesticks60.Add(candlestick);
+                switch (frequency)
+                {
+                    case 5:
+                        Candlesticks5.Add(candlestick);
+                        break;
+                    case 15:
+                        Candlesticks15.Add(candlestick);
+                        break;
+                    default:
+                        Candlesticks60.Add(candlestick);
+                        break;
+                }
 
             }
 
@@ -107,9 +117,6 @@ namespace QJExternalTool
             for (var i = count - n; i < candlesticksFrequency.Count; ++i)
                 candlesticks.Add(candlesticksFrequency[i]);
 
-            if (candlesticks.Last().IsNull)
-                candlesticks.RemoveAt(candlesticks.Count - 1);
-
             return candlesticks;
 
         }
@@ -138,26 +145,40 @@ namespace QJExternalTool
 
         public void Save()
         {
+
             var stringBuilder = new StringBuilder();
 
             foreach (var candlestick in NewCandlesticks)
+                stringBuilder.AppendLine("INSERT INTO " + _product +
+                                     " (O, C, H, L, Frequency) VALUES (" + candlestick.Open + ", " + candlestick.Close +
+                                     ", " + candlestick.High + ", " + candlestick.Low + ", " + candlestick.Frequency +
+                                     ");");
+
+
+            if (stringBuilder.ToString() == string.Empty)
+                return;
+            try
             {
-                stringBuilder.Append("INSERT INTO " + _product +
-                                     " (O, C, H, L, Frequency) VALUES (" + candlestick.Open + ", " + candlestick.Close + ", " + candlestick.High + ", "+ candlestick.Low + ", " + candlestick.Frequency +");");
+
+                var connection = new SqlConnection(ConnectionString);
+
+                var command = new SqlCommand(stringBuilder.ToString()) {CommandType = CommandType.Text};
+
+                connection.Open();
+
+                command.Connection = connection;
+
+                command.ExecuteNonQuery();
+
+                command.Dispose();
+                connection.Dispose();
+
             }
 
-            var connection = new SqlConnection(ConnectionString);
-
-            var command = new SqlCommand(stringBuilder.ToString()) { CommandType = CommandType.Text };
-
-            connection.Open();
-
-            command.Connection = connection;
-
-            command.ExecuteNonQuery();
-
-            command.Dispose();
-            connection.Dispose();
+            catch (Exception e)
+            {
+            
+            }
 
             NewCandlesticks.Clear();
 

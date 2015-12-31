@@ -18,11 +18,19 @@ namespace QJExternalTool
             Close = -1;
             High = -1;
             Low = -1;
+
         }
 
         public void Update(decimal last)
         {
-            IsNull = false;
+
+            if (IsNull)
+            {
+                IsNull = false;
+                Open = last;
+                Low = last;
+            }
+
             Close = last;
             if (last > High)
                 High = last;
