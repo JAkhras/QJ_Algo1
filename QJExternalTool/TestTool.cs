@@ -243,7 +243,7 @@ namespace QJExternalTool
 
             var time = DateTime.Now.Hour;
 
-	        if (time < TimeStart || time >= TimeStart + TimeDuration) return;
+	        //if (time < TimeStart || time >= TimeStart + TimeDuration) return;
 
 	        var fast = _candlestickChart.AverageLast(CandlestickChart.Point.Close, FastLength,
 	            CandlestickChart.CandleFrequency.Candles5);
