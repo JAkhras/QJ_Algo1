@@ -4,6 +4,7 @@ using System.Data;
 using System.Data.SqlClient;
 using System.Linq;
 using System.Text;
+using System.Windows.Forms;
 
 namespace QJExternalTool
 {
@@ -37,7 +38,7 @@ namespace QJExternalTool
 
             var connection = new SqlConnection(ConnectionString);
 
-            var command = new SqlCommand("SELECT O, C, H, L, Frequency FROM " + _product + ";")
+            var command = new SqlCommand("SELECT O, C, H, L, Frequency, Year FROM " + _product + ";")
             {
                 CommandType = CommandType.Text
             };
@@ -63,7 +64,8 @@ namespace QJExternalTool
                     Open = reader.GetDecimal(reader.GetOrdinal("O")),
                     Close = reader.GetDecimal(reader.GetOrdinal("C")),
                     High = reader.GetDecimal(reader.GetOrdinal("H")),
-                    Low = reader.GetDecimal(reader.GetOrdinal("L"))
+                    Low = reader.GetDecimal(reader.GetOrdinal("L")),
+                    Year = reader.GetInt32(reader.GetOrdinal("Year"))
                 };
 
                 switch (frequency)
@@ -143,15 +145,15 @@ namespace QJExternalTool
 
         }
 
-        public void Save()
+        public void Save(TextBox tbxAll)
         {
 
             var stringBuilder = new StringBuilder();
 
             foreach (var candlestick in NewCandlesticks)
                 stringBuilder.AppendLine("INSERT INTO " + _product +
-                                     " (O, C, H, L, Frequency) VALUES (" + candlestick.Open + ", " + candlestick.Close +
-                                     ", " + candlestick.High + ", " + candlestick.Low + ", " + candlestick.Frequency +
+                                     " (O, C, H, L, Frequency, Year) VALUES (" + candlestick.Open + ", " + candlestick.Close +
+                                     ", " + candlestick.High + ", " + candlestick.Low + ", " + candlestick.Frequency + ", " + candlestick.Year +
                                      ");");
 
 
@@ -177,7 +179,7 @@ namespace QJExternalTool
 
             catch (Exception e)
             {
-            
+                tbxAll.AppendText("\r\n" + e);
             }
 
             NewCandlesticks.Clear();

@@ -1,3 +1,5 @@
+using System;
+
 namespace QJExternalTool
 {
     public class Candlestick
@@ -9,6 +11,7 @@ namespace QJExternalTool
         public decimal Low { get; set; }
         public bool IsNull { get; set; }
         public int Frequency { get; set; }
+        public int Year { get; set; }
 
         public Candlestick(int frequency)
         {
@@ -18,6 +21,7 @@ namespace QJExternalTool
             Close = -1;
             High = -1;
             Low = -1;
+            Year = DateTime.Now.Year;
 
         }
 

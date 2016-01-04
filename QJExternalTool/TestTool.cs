@@ -2,6 +2,8 @@
 using System;
 using System.Windows.Forms;
 using QJInterface;
+using Timer = System.Timers.Timer;
+
 #endregion
 
 namespace QJExternalTool
@@ -32,14 +34,13 @@ namespace QJExternalTool
 
         private decimal _lastPrice;
 
-	    private int _stopCoefficient;
-
         private int _lastVolume;
 
-	    //Candlestick stuff
-        private const string Product = "/CGB H6.ME";
+	    private SideEnum _side;
 
-        private readonly System.Timers.Timer _timer;
+	    //Candlestick stuff
+        private const string Product = "/ES H6.CME";
+
 	    private int _frequency;
 
         private Candlestick _currentCandlestick5;
@@ -48,28 +49,20 @@ namespace QJExternalTool
 
 	    private readonly CandlestickChart _candlestickChart;
 
-        //Algo variables
-	    private decimal _fast;
-	    private decimal _slow;
-	    private decimal _buyStop;
-	    private decimal _buyLimit;
-	    private decimal _sellStop;
-	    private decimal _sellLimit;
-
         //Algo inputs
-	    private const int TimeStart = 9;
-	    private const int TimeDuration = 14;
+	    private const int TimeStart = 18;
+	    private const int TimeDuration = 5;
 	    private const int FastLength = 9;
 	    private const int SlowLength = 27;
 
-	    private const int TimerInterval = 5000;
+	    private const int TimerInterval = 300000;
 
-	    private const decimal Point = 0.01m;
+	    private const decimal Point = 0.25m;
 
-        private const int MaxDrawdown = 12;
-        private const int DollarProfitTarget = 20;
-        private const int Earned = 2;
-	    private const int PercentDown = 3;
+        private const int MaxDrawdown = 17;
+        private const int DollarProfitTarget = 40;
+        private const int Earned = 8;
+	    private const int PercentDown = 16;
 
         private const int Lots = 1;
         private const TimeInForceEnum TimeInForce = TimeInForceEnum.GTC;
@@ -90,8 +83,6 @@ namespace QJExternalTool
 
             _candlestickChart = new CandlestickChart("ES_H6_CME");
 
-            _stopCoefficient = _position.NetVolume != 0 ? 1 : 0;
-
             //Set up candlestick
             _lastVolume = _level1.Volume;
             _frequency = 0;
@@ -100,34 +91,28 @@ namespace QJExternalTool
             _currentCandlestick15 = new Candlestick(15);
             _currentCandlestick60 = new Candlestick(60);
 
+            _side = SideEnum.UNDISCLOSED;
+
             //Set up timer
-            _timer = new System.Timers.Timer
+            var timer = new Timer
             {
                 Interval = TimerInterval,
                 Enabled = false,
                 AutoReset = true
             };
-            _timer.Elapsed += TimerOnTick;
-
-            //Set up algo variables
-            _fast = 0;
-            _slow = 0;
-            _buyStop = 0;
-            _buyLimit = 0;
-            _sellStop = 0;
-            _sellLimit = 0;
+            timer.Elapsed += TimerOnTick;
+            timer.Start();
 
         }
 
 	    private void TimerOnTick(object sender, EventArgs eventArgs)
 	    {
 
-            _candlestickChart.Save();
+            _candlestickChart.Save(tbxAll);
 
             if (DateTime.Now.Hour >= 16)
 	        {
-	            _timer.Stop();
-	            _candlestickChart.Save();
+	            _candlestickChart.Save(tbxAll);
 	        }
 
 	        _frequency += 5;
@@ -142,7 +127,7 @@ namespace QJExternalTool
 
 	        if (_frequency%15 == 0)
 	        {
-	            if (_currentCandlestick15.IsNull)
+	            if (!_currentCandlestick15.IsNull)
 	            {
                     _candlestickChart.Candlesticks15.Add(_currentCandlestick15);
                     _candlestickChart.NewCandlesticks.Add(_currentCandlestick15);
@@ -153,7 +138,7 @@ namespace QJExternalTool
 
 	        if (_frequency == 60)
 	        {
-	            if (_currentCandlestick60.IsNull)
+	            if (!_currentCandlestick60.IsNull)
 	            {
                     _candlestickChart.Candlesticks60.Add(_currentCandlestick60);
                     _candlestickChart.NewCandlesticks.Add(_currentCandlestick60);
@@ -175,9 +160,6 @@ namespace QJExternalTool
 		// This function is call when the information in the SymbolLevel1 changed.
 	    private void Level1_Level1Changed(ILevel1 level1)
 		{
-
-            if (!_timer.Enabled)
-                _timer.Start();
 
 		    var volume = level1.Volume;
 
@@ -255,6 +237,7 @@ namespace QJExternalTool
             if (_candlestickChart.Candlesticks5.Count < SlowLength)
 	            return;
 
+            
 	        var high = _candlestickChart.High(CandlestickChart.CandleFrequency.Candles5, 1);
             var low = _candlestickChart.Low(CandlestickChart.CandleFrequency.Candles5, 1);
 
@@ -262,62 +245,82 @@ namespace QJExternalTool
 
 	        if (time < TimeStart || time >= TimeStart + TimeDuration) return;
 
-	        _fast = _candlestickChart.AverageLast(CandlestickChart.Point.Close, FastLength,
+	        var fast = _candlestickChart.AverageLast(CandlestickChart.Point.Close, FastLength,
 	            CandlestickChart.CandleFrequency.Candles5);
-	        _slow = _candlestickChart.AverageLast(CandlestickChart.Point.Close, SlowLength,
+	        var slow = _candlestickChart.AverageLast(CandlestickChart.Point.Close, SlowLength,
 	            CandlestickChart.CandleFrequency.Candles5);
 
-            txbAccounts.AppendText("\r\nFast: " + _fast );
-            txbAccounts.AppendText("\r\nSlow: " + _slow );
+            txbAccounts.AppendText("\r\nFast: " + fast );
+            txbAccounts.AppendText("\r\nSlow: " + slow );
 
 	        var coefficient = _position.NetVolume == 0 ? 0 : 1;
 
             var orderSize = (Lots + (Lots*coefficient));
 
-            if (_fast > _slow)
+            if (fast > slow)
             {
+
+                if (_side == SideEnum.UNDISCLOSED)
+                    _side = SideEnum.SELL;
 
                 txbAccounts.AppendText("\r\nUp Trend");
 
-	            _buyStop = high + Point;
-	            _buyLimit = high + 5*Point;
+	            var buyStop = high + Point;
+	            var buyLimit = high + 5*Point;
 
-                txbAccounts.AppendText("\r\nL1 Ask: " + _level1.Ask + " == " + " Buy Stop: " + _buyStop + " && " + _level1.AskSize + " > " + (orderSize*2));
-                txbAccounts.AppendText("\r\nL1 Ask: " + _level1.Ask + " < " + " Buy Limit: " + _buyLimit);
+                txbAccounts.AppendText("\r\nL1 Ask: " + _level1.Ask + " == " + " Buy Stop: " + buyStop + " && " + _level1.AskSize + " > " + (orderSize*2));
+                txbAccounts.AppendText("\r\nL1 Ask: " + _level1.Ask + " < " + " Buy Limit: " + buyLimit);
 
                 //buy;
-                if (_position.NetVolume <= 0 && _level1.Ask == _buyStop && _level1.AskSize > orderSize * 2)
+                if (_position.NetVolume <= 0 && _level1.Ask == buyStop && _level1.AskSize > orderSize * 2 
+                    && _side == SideEnum.BUY)
                 {
                     tbxAll.AppendText("\r\nShould BUY at:" + DateTime.Now);
-                    Buy(orderSize, _buyStop, OrderTypeLimit);
+                    Buy(orderSize, buyStop, OrderTypeLimit);
                 }
 
             }
 
-            else if (_fast < _slow)
+            else if (fast < slow)
 	        {
+
+                if (_side == SideEnum.UNDISCLOSED)
+                    _side = SideEnum.BUY;
+
                 txbAccounts.AppendText("\r\nDown Trend");
 
-                _sellStop = low - Point;
-	            _sellLimit = low - 5 * Point;
+                var sellStop = low - Point;
+	            var sellLimit = low - 5 * Point;
 
-                txbAccounts.AppendText("\r\nL1 Bid: " + _level1.Bid + " == " + " Sell Stop: " + _sellStop + " && " + _level1.BidSize + " > " + (orderSize * 2));
-                txbAccounts.AppendText("\r\nL1 Bid: " + _level1.Bid + " > " + " Sell Limit: " + _sellLimit);
+                txbAccounts.AppendText("\r\nL1 Bid: " + _level1.Bid + " == " + " Sell Stop: " + sellStop + " && " + _level1.BidSize + " > " + (orderSize * 2));
+                txbAccounts.AppendText("\r\nL1 Bid: " + _level1.Bid + " > " + " Sell Limit: " + sellLimit);
 
 
                 //sell;
-                if (_position.NetVolume >= 0 && _level1.Bid == _sellStop && _level1.BidSize > orderSize*2)
+                if (_position.NetVolume >= 0 && _level1.Bid == sellStop && _level1.BidSize > orderSize*2 
+                    && _side == SideEnum.SELL)
 	            {
                     tbxAll.AppendText("\r\nShould SELL at: " + DateTime.Now);
-                    Sell(orderSize, _sellStop, OrderTypeLimit);
-                }
+                    Sell(orderSize, sellStop, OrderTypeLimit);
+	            }
 
             }
+
+
+
 	    }
 
-	    private void Buy(int orderSize, decimal price, string orderType) => CreateOrder(SideEnum.BUY, orderSize, price, orderType);
+	    private void Buy(int orderSize, decimal price, string orderType)
+	    {
+            CreateOrder(SideEnum.BUY, orderSize, price, orderType);
+            _side = SideEnum.SELL;
+        } 
 
-	    private void Sell(int orderSize, decimal price, string orderType) => CreateOrder(SideEnum.SELL, orderSize, price, orderType);
+	    private void Sell(int orderSize, decimal price, string orderType)
+	    {
+            CreateOrder(SideEnum.SELL, orderSize, price, orderType);
+            _side = SideEnum.SELL;
+        } 
 
 	    private void CreateOrder(SideEnum sideEnum, int size, decimal price, string orderType)
 	    {
