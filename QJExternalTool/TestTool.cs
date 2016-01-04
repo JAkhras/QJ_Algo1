@@ -50,8 +50,8 @@ namespace QJExternalTool
 	    private readonly CandlestickChart _candlestickChart;
 
         //Algo inputs
-	    private const int TimeStart = 18;
-	    private const int TimeDuration = 5;
+	    private const int TimeStart = 9;
+	    private const int TimeDuration = 14;
 	    private const int FastLength = 9;
 	    private const int SlowLength = 27;
 
@@ -148,8 +148,6 @@ namespace QJExternalTool
                 _frequency = 0;
 	        }
 
-            Algorithm();
-
 
 	    }
 
@@ -163,69 +161,72 @@ namespace QJExternalTool
 
 		    var volume = level1.Volume;
 
+            Algorithm();
+            CheckStops();
+
             //updating candlestick
-		    if (_lastVolume == volume) return;
+            if (_lastVolume == volume) return;
 		    _lastVolume = volume;
             var last = level1.Last;
 		    _currentCandlestick5.Update(last);
 		    _currentCandlestick15.Update(last);
 		    _currentCandlestick60.Update(last);
 
-            if (_position.NetVolume != 0)
-	            CheckStops(level1);
+	            
 
 		}
 
-	    private void CheckStops(ILevel1 level1)
+	    private void CheckStops()
 	    {
-	        CheckStopLoss(level1);
-	        CheckPercentTrailing(level1);
-	        CheckProfitTarget(level1);
+	        CheckStopLoss();
+	        CheckPercentTrailing();
+	        CheckProfitTarget();
 	    }
 
-	    private void CheckProfitTarget(ILevel1 level1)
+
+	    private void CheckProfitTarget()
 	    {
-            if (_position.NetVolume > 0 && level1.Bid >= _lastPrice + DollarProfitTarget * Point)
+            if (_position.NetVolume > 0 && _level1.Bid >= _lastPrice + DollarProfitTarget * Point)
             {
                 tbxAll.AppendText("\r\nProfit Target SELL");
-                Sell(Lots, level1.Bid, OrderTypeMarket);
+                Sell(Lots, _level1.Bid, OrderTypeMarket);
             }
-            else if (_position.NetVolume < 0 && level1.Ask < _lastPrice - DollarProfitTarget * Point)
+            else if (_position.NetVolume < 0 && _level1.Ask < _lastPrice - DollarProfitTarget * Point)
             {
                 tbxAll.AppendText("\r\nProfit Target BUY");
-                Buy(Lots, level1.Ask, OrderTypeMarket);
+                Buy(Lots, _level1.Ask, OrderTypeMarket);
             }
         }
 
-	    private void CheckPercentTrailing(ILevel1 level1)
+	    private void CheckPercentTrailing()
 	    {
-	        if (_position.NetVolume > 0 && level1.Bid >= _lastPrice + Earned*Point)
+	        if (_position.NetVolume > 0 && _level1.Bid >= _lastPrice + Earned*Point)
 	        {
-	            var stop = _currentCandlestick5.High - PercentDown*Point;
-	            if (level1.Bid > stop) return;
+	            var stop = _level1.Bid - PercentDown*Point;
+	            if (_level1.Bid > stop) return;
                 tbxAll.AppendText("\r\nPercent Trailing SELL");
-                Sell(Lots, level1.Bid, OrderTypeMarket);
+                Sell(Lots, _level1.Bid, OrderTypeMarket);
 	        }
-            else if (_position.NetVolume < 0 && level1.Ask >= _lastPrice - Earned*Point)
+            else if (_position.NetVolume < 0 && _level1.Ask >= _lastPrice - Earned*Point)
             {
-                var stop = _currentCandlestick5.Low + PercentDown*Point;
-                if (level1.Ask < stop) return;
+                var stop = _level1.Ask + PercentDown*Point;
+                if (_level1.Ask < stop) return;
                 tbxAll.AppendText("\r\nPercent Trailing BUY");
-                Buy(Lots, level1.Ask, OrderTypeMarket);
+                Buy(Lots, _level1.Ask, OrderTypeMarket);
             }
 	    }
 
-	    private void CheckStopLoss(ILevel1 level1)
+	    private void CheckStopLoss()
 	    {
-	        if (_position.NetVolume > 0 && level1.Bid <= _lastPrice - MaxDrawdown*Point)
+	        if (_position.NetVolume > 0 && _level1.Bid <= _lastPrice - MaxDrawdown*Point)
 	        {
                 tbxAll.AppendText("\r\nStop Loss SELL");
-                Sell(Lots, level1.Bid, OrderTypeMarket);
+                Sell(Lots, _level1.Bid, OrderTypeMarket);
 	        }
-	        else if (_position.NetVolume < 0 && level1.Ask > _lastPrice + MaxDrawdown*Point)
+	        else if (_position.NetVolume < 0 && _level1.Ask > _lastPrice + MaxDrawdown*Point)
 	        {
                 tbxAll.AppendText("\r\nStop Loss BUY");
-                Buy(Lots, level1.Ask, OrderTypeMarket);
+                Buy(Lots, _level1.Ask, OrderTypeMarket);
 	        }
 	    }
 
@@ -243,7 +244,7 @@ namespace QJExternalTool
 
             var time = DateTime.Now.Hour;
 
-	        //if (time < TimeStart || time >= TimeStart + TimeDuration) return;
+	        if (time < TimeStart || time >= TimeStart + TimeDuration) return;
 
 	        var fast = _candlestickChart.AverageLast(CandlestickChart.Point.Close, FastLength,
 	            CandlestickChart.CandleFrequency.Candles5);
@@ -268,12 +269,12 @@ namespace QJExternalTool
 	            var buyStop = high + Point;
 	            var buyLimit = high + 5*Point;
 
-                txbAccounts.AppendText("\r\nL1 Ask: " + _level1.Ask + " == " + " Buy Stop: " + buyStop + " && " + _level1.AskSize + " > " + (orderSize*2));
+                txbAccounts.AppendText("\r\nL1 Ask: " + _level1.Ask + " >= " + " Buy Stop: " + buyStop + " && " + _level1.AskSize + " > " + (orderSize*2));
                 txbAccounts.AppendText("\r\nL1 Ask: " + _level1.Ask + " < " + " Buy Limit: " + buyLimit);
 
                 //buy;
-                if (_position.NetVolume <= 0 && _level1.Ask == buyStop && _level1.AskSize > orderSize * 2 
-                    && _side == SideEnum.BUY)
+                if (_position.NetVolume <= 0 && _level1.Ask >= buyStop 
+                    && _side == SideEnum.BUY && _level1.Ask < buyLimit)
                 {
                     tbxAll.AppendText("\r\nShould BUY at:" + DateTime.Now);
                     Buy(orderSize, buyStop, OrderTypeLimit);
@@ -292,13 +293,13 @@ namespace QJExternalTool
                 var sellStop = low - Point;
 	            var sellLimit = low - 5 * Point;
 
-                txbAccounts.AppendText("\r\nL1 Bid: " + _level1.Bid + " == " + " Sell Stop: " + sellStop + " && " + _level1.BidSize + " > " + (orderSize * 2));
-                txbAccounts.AppendText("\r\nL1 Bid: " + _level1.Bid + " > " + " Sell Limit: " + sellLimit);
+                txbAccounts.AppendText("\r\nL1 Bid: " + _level1.Bid + " <= " + " Sell Stop: " + sellStop + " && " + _level1.BidSize + " > " + (orderSize * 2));
+                txbAccounts.AppendText("\r\nL1 Bid: " + _level1.Bid + " > " + " Sell Limit: " + sellLimit + _side);
 
 
                 //sell;
-                if (_position.NetVolume >= 0 && _level1.Bid == sellStop && _level1.BidSize > orderSize*2 
-                    && _side == SideEnum.SELL)
+                if (_position.NetVolume >= 0 && _level1.Bid <= sellStop  
+                    && _side == SideEnum.SELL && _level1.Bid > sellLimit)
 	            {
                     tbxAll.AppendText("\r\nShould SELL at: " + DateTime.Now);
                     Sell(orderSize, sellStop, OrderTypeLimit);
