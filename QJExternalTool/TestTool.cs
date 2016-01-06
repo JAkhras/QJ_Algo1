@@ -2,7 +2,7 @@
 using System;
 using System.Windows.Forms;
 using QJInterface;
-using Timer = System.Timers.Timer;
+
 
 #endregion
 
@@ -41,11 +41,7 @@ namespace QJExternalTool
 	    //Candlestick stuff
         private const string Product = "/ES H6.CME";
 
-	    private int _frequency;
 
-        private Candlestick _currentCandlestick5;
-	    private Candlestick _currentCandlestick15;
-	    private Candlestick _currentCandlestick60;
 
 	    private readonly CandlestickChart _candlestickChart;
 
@@ -81,75 +77,17 @@ namespace QJExternalTool
             _level1 = _host.GetLevel1(Product);
             _level1.Level1Changed += Level1_Level1Changed;
 
-            _candlestickChart = new CandlestickChart("ES_H6_CME");
+            _candlestickChart = new CandlestickChart("ES_H6_CME", TimerInterval, FastLength, SlowLength);
 
             //Set up candlestick
             _lastVolume = _level1.Volume;
-            _frequency = 0;
 
-            _currentCandlestick5 = new Candlestick(5);
-            _currentCandlestick15 = new Candlestick(15);
-            _currentCandlestick60 = new Candlestick(60);
 
             _side = SideEnum.UNDISCLOSED;
 
-            //Set up timer
-            var timer = new Timer
-            {
-                Interval = TimerInterval,
-                Enabled = false,
-                AutoReset = true
-            };
-            timer.Elapsed += TimerOnTick;
-            timer.Start();
-
         }
 
-	    private void TimerOnTick(object sender, EventArgs eventArgs)
-	    {
 
-            _candlestickChart.Save(tbxAll);
-
-            if (DateTime.Now.Hour >= 16)
-	        {
-	            _candlestickChart.Save(tbxAll);
-	        }
-
-	        _frequency += 5;
-
-	        if (!_currentCandlestick5.IsNull)
-	        {
-                _candlestickChart.Candlesticks5.Add(_currentCandlestick5);
-                _candlestickChart.NewCandlesticks.Add(_currentCandlestick5);
-            }
-            _currentCandlestick5 = new Candlestick(5);
-
-
-	        if (_frequency%15 == 0)
-	        {
-	            if (!_currentCandlestick15.IsNull)
-	            {
-                    _candlestickChart.Candlesticks15.Add(_currentCandlestick15);
-                    _candlestickChart.NewCandlesticks.Add(_currentCandlestick15);
-                }
-                _currentCandlestick15 = new Candlestick(15);
-
-            }
-
-	        if (_frequency == 60)
-	        {
-	            if (!_currentCandlestick60.IsNull)
-	            {
-                    _candlestickChart.Candlesticks60.Add(_currentCandlestick60);
-                    _candlestickChart.NewCandlesticks.Add(_currentCandlestick60);
-                }
-                _currentCandlestick60 = new Candlestick(60);
-
-                _frequency = 0;
-	        }
-
-
-	    }
 
 	    #endregion
 
@@ -167,69 +105,11 @@ namespace QJExternalTool
             //updating candlestick
             if (_lastVolume == volume) return;
 		    _lastVolume = volume;
-            var last = level1.Last;
-		    _currentCandlestick5.Update(last);
-		    _currentCandlestick15.Update(last);
-		    _currentCandlestick60.Update(last);
-
-	            
+            _candlestickChart.Update(level1.Last); 
 
 		}
 
-	    private void CheckStops()
-	    {
-	        CheckStopLoss();
-	        CheckPercentTrailing();
-	        CheckProfitTarget();
-	    }
-
-
-	    private void CheckProfitTarget()
-	    {
-            if (_position.NetVolume > 0 && _level1.Bid >= _lastPrice + DollarProfitTarget * Point)
-            {
-                tbxAll.AppendText("\r\nProfit Target SELL");
-                Sell(Lots, _level1.Bid, OrderTypeMarket);
-            }
-            else if (_position.NetVolume < 0 && _level1.Ask < _lastPrice - DollarProfitTarget * Point)
-            {
-                tbxAll.AppendText("\r\nProfit Target BUY");
-                Buy(Lots, _level1.Ask, OrderTypeMarket);
-            }
-        }
-
-	    private void CheckPercentTrailing()
-	    {
-	        if (_position.NetVolume > 0 && _level1.Bid >= _lastPrice + Earned*Point)
-	        {
-	            var stop = _level1.Bid - PercentDown*Point;
-	            if (_level1.Bid > stop) return;
-                tbxAll.AppendText("\r\nPercent Trailing SELL");
-                Sell(Lots, _level1.Bid, OrderTypeMarket);
-	        }
-            else if (_position.NetVolume < 0 && _level1.Ask >= _lastPrice - Earned*Point)
-            {
-                var stop = _level1.Ask + PercentDown*Point;
-                if (_level1.Ask < stop) return;
-                tbxAll.AppendText("\r\nPercent Trailing BUY");
-                Buy(Lots, _level1.Ask, OrderTypeMarket);
-            }
-	    }
-
-	    private void CheckStopLoss()
-	    {
-	        if (_position.NetVolume > 0 && _level1.Bid <= _lastPrice - MaxDrawdown*Point)
-	        {
-                tbxAll.AppendText("\r\nStop Loss SELL");
-                Sell(Lots, _level1.Bid, OrderTypeMarket);
-	        }
-	        else if (_position.NetVolume < 0 && _level1.Ask > _lastPrice + MaxDrawdown*Point)
-	        {
-                tbxAll.AppendText("\r\nStop Loss BUY");
-                Buy(Lots, _level1.Ask, OrderTypeMarket);
-	        }
-	    }
-
+        //Algorithm
 	    private void Algorithm()
 	    {
 
@@ -311,7 +191,64 @@ namespace QJExternalTool
 
 	    }
 
-	    private void Buy(int orderSize, decimal price, string orderType)
+        //Stops
+        private void CheckStops()
+        {
+            CheckStopLoss();
+            CheckPercentTrailing();
+            CheckProfitTarget();
+        }
+
+
+        private void CheckProfitTarget()
+        {
+            if (_position.NetVolume > 0 && _level1.Bid >= _lastPrice + DollarProfitTarget * Point)
+            {
+                tbxAll.AppendText("\r\nProfit Target SELL");
+                Sell(Lots, _level1.Bid, OrderTypeMarket);
+            }
+            else if (_position.NetVolume < 0 && _level1.Ask < _lastPrice - DollarProfitTarget * Point)
+            {
+                tbxAll.AppendText("\r\nProfit Target BUY");
+                Buy(Lots, _level1.Ask, OrderTypeMarket);
+            }
+        }
+
+        private void CheckPercentTrailing()
+        {
+            if (_position.NetVolume > 0 && _level1.Bid >= _lastPrice + Earned * Point)
+            {
+                var stop = _level1.Bid - PercentDown * Point;
+                if (_level1.Bid > stop) return;
+                tbxAll.AppendText("\r\nPercent Trailing SELL");
+                Sell(Lots, _level1.Bid, OrderTypeMarket);
+            }
+            else if (_position.NetVolume < 0 && _level1.Ask >= _lastPrice - Earned * Point)
+            {
+                var stop = _level1.Ask + PercentDown * Point;
+                if (_level1.Ask < stop) return;
+                tbxAll.AppendText("\r\nPercent Trailing BUY");
+                Buy(Lots, _level1.Ask, OrderTypeMarket);
+            }
+        }
+
+        private void CheckStopLoss()
+        {
+            if (_position.NetVolume > 0 && _level1.Bid <= _lastPrice - MaxDrawdown * Point)
+            {
+                tbxAll.AppendText("\r\nStop Loss SELL");
+                Sell(Lots, _level1.Bid, OrderTypeMarket);
+            }
+            else if (_position.NetVolume < 0 && _level1.Ask > _lastPrice + MaxDrawdown * Point)
+            {
+                tbxAll.AppendText("\r\nStop Loss BUY");
+                Buy(Lots, _level1.Ask, OrderTypeMarket);
+            }
+        }
+
+
+        //Ordering functions
+        private void Buy(int orderSize, decimal price, string orderType)
 	    {
             CreateOrder(SideEnum.BUY, orderSize, price, orderType);
             _side = SideEnum.SELL;

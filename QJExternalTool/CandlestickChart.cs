@@ -4,7 +4,7 @@ using System.Data;
 using System.Data.SqlClient;
 using System.Linq;
 using System.Text;
-using System.Windows.Forms;
+using Timer = System.Timers.Timer;
 
 namespace QJExternalTool
 {
@@ -32,9 +32,21 @@ namespace QJExternalTool
 
         public List<Candlestick> NewCandlesticks { get; set; }
 
-        public CandlestickChart(string product)
+        private int _frequency;
+
+        private Candlestick _currentCandlestick5;
+        private Candlestick _currentCandlestick15;
+        private Candlestick _currentCandlestick60;
+
+        private int _fastLength;
+        private int _slowLength;
+
+        public CandlestickChart(string product, int timerInterval, int fastLength, int slowLength)
         {
             _product = product;
+
+            _fastLength = fastLength;
+            _slowLength = slowLength;
 
             var connection = new SqlConnection(ConnectionString);
 
@@ -86,6 +98,69 @@ namespace QJExternalTool
             reader.Dispose();
             command.Dispose();
             connection.Dispose();
+
+            _frequency = 0;
+
+            _currentCandlestick5 = new Candlestick(5);
+            _currentCandlestick15 = new Candlestick(15);
+            _currentCandlestick60 = new Candlestick(60);
+
+
+            //Set up timer
+            var timer = new Timer
+            {
+                Interval = timerInterval,
+                Enabled = false,
+                AutoReset = true
+            };
+            timer.Elapsed += TimerOnTick;
+            timer.Start();
+
+        }
+
+        private void TimerOnTick(object sender, EventArgs eventArgs)
+        {
+
+            Save();
+
+            if (DateTime.Now.Hour >= 16)
+            {
+                Save();
+            }
+
+            _frequency += 5;
+
+            if (!_currentCandlestick5.IsNull)
+            {
+                Candlesticks5.Add(_currentCandlestick5);
+                NewCandlesticks.Add(_currentCandlestick5);
+            }
+            _currentCandlestick5 = new Candlestick(5);
+
+
+            if (_frequency % 15 == 0)
+            {
+                if (!_currentCandlestick15.IsNull)
+                {
+                    Candlesticks15.Add(_currentCandlestick15);
+                    NewCandlesticks.Add(_currentCandlestick15);
+                }
+                _currentCandlestick15 = new Candlestick(15);
+
+            }
+
+            if (_frequency == 60)
+            {
+                if (!_currentCandlestick60.IsNull)
+                {
+                    Candlesticks60.Add(_currentCandlestick60);
+                    NewCandlesticks.Add(_currentCandlestick60);
+                }
+                _currentCandlestick60 = new Candlestick(60);
+
+                _frequency = 0;
+            }
+
 
         }
 
@@ -145,7 +220,7 @@ namespace QJExternalTool
 
         }
 
-        public void Save(TextBox tbxAll)
+        public void Save()
         {
 
             var stringBuilder = new StringBuilder();
@@ -179,7 +254,7 @@ namespace QJExternalTool
 
             catch (Exception e)
             {
-                tbxAll.AppendText("\r\n" + e);
+                //tbxAll.AppendText("\r\n" + e);
             }
 
             NewCandlesticks.Clear();
@@ -244,6 +319,13 @@ namespace QJExternalTool
                 default:
                     return 0;
             }
+        }
+
+        public void Update(decimal last)
+        {
+            _currentCandlestick5.Update(last);
+            _currentCandlestick15.Update(last);
+            _currentCandlestick60.Update(last);
         }
 
     }
