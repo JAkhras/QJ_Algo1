@@ -24,6 +24,11 @@ namespace QJExternalTool
             Candles5, Candles15, Candles60
         }
 
+        public enum Trends
+        {
+            Up, Down
+        }
+
         private readonly string _product;
 
         public List<Candlestick> Candlesticks5 { get; }
@@ -41,20 +46,35 @@ namespace QJExternalTool
         private readonly int _fastLength;
         private readonly int _slowLength;
 
-        public decimal HighAtSignal { get; set; }
-        public decimal LowAtSignal { get; set; }
+        public decimal HighAtSignal { get; private set; }
+        public decimal LowAtSignal { get; private set; }
 
-        public decimal Fast { get; set; }
+        public Trends Trend { get; private set; }
+
+        public decimal Fast { get; private set; }
 
         private decimal _slow;
         public decimal Slow
         {
             get { return _slow; }
-            set
+            private set
             {
                 _slow = value;
-                
-                //TODO
+
+                var crossedUp = Fast > value && _lastFast <= _lastSlow;
+                var crossedDown = Fast < value && _lastFast >= _lastSlow;
+
+                if (crossedUp || crossedDown)
+                {
+                    HighAtSignal = High(CandleFrequency.Candles5, 1);
+                    LowAtSignal = Low(CandleFrequency.Candles5, 1);
+
+                    Trend = crossedUp ? Trends.Up : Trends.Down;
+
+                }
+
+                _lastFast = Fast;
+                _lastSlow = value;
             }
         }
 
@@ -125,8 +145,9 @@ namespace QJExternalTool
             _currentCandlestick15 = new Candlestick(15);
             _currentCandlestick60 = new Candlestick(60);
 
-            _lastFast = AverageLast(Point.Close, _fastLength, CandleFrequency.Candles5);
-            _lastSlow = AverageLast(Point.Close, _slowLength, CandleFrequency.Candles5);
+
+            Fast = AverageLast(Point.Close, _fastLength, CandleFrequency.Candles5);
+            Slow = AverageLast(Point.Close, _fastLength, CandleFrequency.Candles5);
 
             //Set up timer
             var timer = new Timer
@@ -192,6 +213,10 @@ namespace QJExternalTool
             if (n < 1)
                 return null;
 
+            Candlestick currentCandlestick;
+
+ 
+
             var candlesticks = new List<Candlestick>();
 
             List<Candlestick> candlesticksFrequency;
@@ -200,24 +225,32 @@ namespace QJExternalTool
             {
                 case CandleFrequency.Candles5:
                     candlesticksFrequency = Candlesticks5;
+                    currentCandlestick = _currentCandlestick5;
                     break;
                 case CandleFrequency.Candles15:
                     candlesticksFrequency = Candlesticks15;
+                    currentCandlestick = _currentCandlestick15;
                     break;
                 case CandleFrequency.Candles60:
                     candlesticksFrequency = Candlesticks60;
+                    currentCandlestick = _currentCandlestick60;
                     break;
                 default:
                     return null;
             }
+
+            if (!currentCandlestick.IsNull)
+                n--;
 
             var count = candlesticksFrequency.Count;
 
             for (var i = count - n; i < candlesticksFrequency.Count; ++i)
                 candlesticks.Add(candlesticksFrequency[i]);
 
-            return candlesticks;
+            if (!currentCandlestick.IsNull)
+                candlesticks.Add(currentCandlestick);
 
+            return candlesticks;
         }
 
         public decimal AverageLast(Point point, int n, CandleFrequency candleFrequency)
@@ -227,38 +260,30 @@ namespace QJExternalTool
             switch (point)
             {
                 case Point.Open:
-                    return candlesticks.Sum(candlestick => candlestick.Open) / candlesticks.Count;
+                    return candlesticks.Sum(candlestick => candlestick.Open)/candlesticks.Count;
                 case Point.Close:
-                    return candlesticks.Sum(candlestick => candlestick.Close) / candlesticks.Count;
+                    return candlesticks.Sum(candlestick => candlestick.Close)/candlesticks.Count;
                 case Point.High:
-                    return candlesticks.Sum(candlestick => candlestick.High) / candlesticks.Count;
+                    return candlesticks.Sum(candlestick => candlestick.High)/candlesticks.Count;
                 case Point.Low:
-                    return candlesticks.Sum(candlestick => candlestick.Low) / candlesticks.Count;
+                    return candlesticks.Sum(candlestick => candlestick.Low)/candlesticks.Count;
                 default:
                     return 0;
-
             }
-            
-
         }
 
         public void Save()
         {
-
             var stringBuilder = new StringBuilder();
 
             foreach (var candlestick in NewCandlesticks)
-                stringBuilder.AppendLine("INSERT INTO " + _product +
-                                     " (O, C, H, L, Frequency, Year) VALUES (" + candlestick.Open + ", " + candlestick.Close +
-                                     ", " + candlestick.High + ", " + candlestick.Low + ", " + candlestick.Frequency + ", " + candlestick.Year +
-                                     ");");
+                stringBuilder.AppendLine("INSERT INTO " + _product + " (O, C, H, L, Frequency, Year) VALUES (" + candlestick.Open + ", " + candlestick.Close + ", " + candlestick.High + ", " + candlestick.Low + ", " + candlestick.Frequency + ", " + candlestick.Year + ");");
 
 
             if (stringBuilder.ToString() == string.Empty)
                 return;
             try
             {
-
                 var connection = new SqlConnection(ConnectionString);
 
                 var command = new SqlCommand(stringBuilder.ToString()) {CommandType = CommandType.Text};
@@ -271,7 +296,6 @@ namespace QJExternalTool
 
                 command.Dispose();
                 connection.Dispose();
-
             }
 
             catch (Exception e)
@@ -280,7 +304,6 @@ namespace QJExternalTool
             }
 
             NewCandlesticks.Clear();
-
         }
 
         public decimal High(CandleFrequency candleFrequency, int n)
@@ -351,11 +374,8 @@ namespace QJExternalTool
 
             Fast = AverageLast(Point.Close, _fastLength, CandleFrequency.Candles5);
             Slow = AverageLast(Point.Close, _slowLength, CandleFrequency.Candles5);
-
-            _lastFast = Fast;
-            _lastSlow = Slow;
-
         }
+
 
     }
 }
