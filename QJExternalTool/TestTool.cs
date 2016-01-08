@@ -126,10 +126,7 @@ namespace QJExternalTool
 
 	        if (time < TimeStart || time >= TimeStart + TimeDuration) return;
 
-	        var fast = _candlestickChart.AverageLast(CandlestickChart.Point.Close, FastLength,
-	            CandlestickChart.CandleFrequency.Candles5);
-	        var slow = _candlestickChart.AverageLast(CandlestickChart.Point.Close, SlowLength,
-	            CandlestickChart.CandleFrequency.Candles5);
+
 
             txbAccounts.AppendText("\r\nFast: " + fast );
             txbAccounts.AppendText("\r\nSlow: " + slow );

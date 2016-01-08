@@ -38,8 +38,28 @@ namespace QJExternalTool
         private Candlestick _currentCandlestick15;
         private Candlestick _currentCandlestick60;
 
-        private int _fastLength;
-        private int _slowLength;
+        private readonly int _fastLength;
+        private readonly int _slowLength;
+
+        public decimal HighAtSignal { get; set; }
+        public decimal LowAtSignal { get; set; }
+
+        public decimal Fast { get; set; }
+
+        private decimal _slow;
+        public decimal Slow
+        {
+            get { return _slow; }
+            set
+            {
+                _slow = value;
+                
+                //TODO
+            }
+        }
+
+        private decimal _lastFast;
+        private decimal _lastSlow;
 
         public CandlestickChart(string product, int timerInterval, int fastLength, int slowLength)
         {
@@ -105,6 +125,8 @@ namespace QJExternalTool
             _currentCandlestick15 = new Candlestick(15);
             _currentCandlestick60 = new Candlestick(60);
 
+            _lastFast = AverageLast(Point.Close, _fastLength, CandleFrequency.Candles5);
+            _lastSlow = AverageLast(Point.Close, _slowLength, CandleFrequency.Candles5);
 
             //Set up timer
             var timer = new Timer
@@ -326,6 +348,13 @@ namespace QJExternalTool
             _currentCandlestick5.Update(last);
             _currentCandlestick15.Update(last);
             _currentCandlestick60.Update(last);
+
+            Fast = AverageLast(Point.Close, _fastLength, CandleFrequency.Candles5);
+            Slow = AverageLast(Point.Close, _slowLength, CandleFrequency.Candles5);
+
+            _lastFast = Fast;
+            _lastSlow = Slow;
+
         }
 
     }
