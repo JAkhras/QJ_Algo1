@@ -35,6 +35,7 @@ namespace QJExternalTool
         private decimal _lastPrice;
 
         private int _lastVolume;
+	    private bool _canCheckForTrailingStop;
 
 	    private decimal _highestBid;
 	    private decimal _lowestAsk;
@@ -111,7 +112,7 @@ namespace QJExternalTool
 	        if (ask < _lowestAsk)
 	            _lowestAsk = ask;
 
-		    var volume = level1.Volume;
+	        var volume = level1.Volume;
 
             //updating candlestick
             if (_lastVolume != volume)
@@ -220,7 +221,10 @@ namespace QJExternalTool
                              _position.NetVolume < 0 && _level1.Ask >= _lastPrice - Earned * Point)
                 _canCheckForTrailingStop = true;
 
-            if (_position.NetVolume > 0 && _level1.Bid >= _lastPrice + Earned * Point)
+            if (!_canCheckForTrailingStop) return;
+
+
+            if (_position.NetVolume > 0)
              
 
             {
@@ -232,7 +236,7 @@ namespace QJExternalTool
             }
 
 
-            else if (_position.NetVolume < 0 && _level1.Ask <= _lastPrice - Earned * Point)
+            else if (_position.NetVolume < 0)
             {
                 var stop = _lowestAsk + PercentDown * Point;
                 txbAccounts.AppendText("\r\nWill get out of SHORT position at Trailing Stop: " + stop);
@@ -283,6 +287,7 @@ namespace QJExternalTool
 	    private void CreateOrder(SideEnum sideEnum, int size, decimal price, string orderType)
 	    {
             _candlestickChart.Signal = CandlestickChart.Signals.None;
+	        _canCheckForTrailingStop = false;
             tbxAll.AppendText("\r\nORDER!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
 
 	        _order = _host.CreateOrder(Product, sideEnum, size, price, TimeInForceEnum.GTC, orderType);
