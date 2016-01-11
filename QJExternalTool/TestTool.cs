@@ -167,7 +167,7 @@ namespace QJExternalTool
 
                 case CandlestickChart.Signals.Sell:
 
-                    txbAccounts.AppendText("\r\nDown Trend");
+                    _stringBuilder.Append("\r\nDown Trend");
 
                     var sellStop = _candlestickChart.LowAtSignal - Point;
                     var sellLimit = _candlestickChart.LowAtSignal - 5 * Point;

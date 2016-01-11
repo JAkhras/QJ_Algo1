@@ -65,9 +65,7 @@ namespace QJExternalTool
                 if (crossedUp || crossedDown)
                 {
                     HighAtSignal = High(CandleFrequency.Candles5, 1);
-                    _box.AppendText("\r\nHighAtSignal:" + HighAtSignal);
                     LowAtSignal = Low(CandleFrequency.Candles5, 1);
-                    _box.AppendText("\r\nLowAtSignal:" + LowAtSignal);
                     Signal = crossedUp ? Signals.Buy : Signals.Sell;
 
                 }
