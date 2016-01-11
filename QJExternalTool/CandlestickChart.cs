@@ -135,9 +135,6 @@ namespace QJExternalTool
             CurrentCandlestick15 = new Candlestick(15);
             CurrentCandlestick60 = new Candlestick(60);
 
-            foreach (var c in Candlesticks5)
-                box.AppendText("\r\n High:" + c.High + " Low:" + c.Low + " Open:" + c.Open + " Close:" + c.Close);
-
             Fast = AverageLast(Point.Close, _fastLength, CandleFrequency.Candles5);
             Slow = AverageLast(Point.Close, _fastLength, CandleFrequency.Candles5);
 
