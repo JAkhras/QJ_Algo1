@@ -45,7 +45,7 @@ namespace QJExternalTool
         public decimal HighAtSignal { get; private set; }
         public decimal LowAtSignal { get; private set; }
 
-        public Signals Signal { get; private set; }
+        public Signals Signal { get; set; }
 
         public decimal Fast { get; private set; }
 

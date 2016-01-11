@@ -35,7 +35,6 @@ namespace QJExternalTool
         private decimal _lastPrice;
 
         private int _lastVolume;
-	    private bool _canCheckForTrailingStop;
 
 	    private decimal _highestBid;
 	    private decimal _lowestAsk;
@@ -215,24 +214,28 @@ namespace QJExternalTool
 	        }
 	    }
 
-	    private void CheckPercentTrailing()
-	    {
-	        if (_position.NetVolume > 0 && _level1.Bid >= _lastPrice + Earned*Point ||
-	            _position.NetVolume < 0 && _level1.Ask >= _lastPrice - Earned*Point)
-	            _canCheckForTrailingStop = true;
+        private void CheckPercentTrailing()
+        {
+            if (_position.NetVolume > 0 && _level1.Bid >= _lastPrice + Earned * Point ||
+                             _position.NetVolume < 0 && _level1.Ask >= _lastPrice - Earned * Point)
+                _canCheckForTrailingStop = true;
 
-	        if (_canCheckForTrailingStop && _position.NetVolume > 0)
-	        {
+            if (_position.NetVolume > 0 && _level1.Bid >= _lastPrice + Earned * Point)
+             
+
+            {
                 var stop = _highestBid - PercentDown * Point;
+                txbAccounts.AppendText("\r\nWill get out of LONG position at Trailing Stop: " + stop);
                 if (_level1.Bid > stop) return;
                 tbxAll.AppendText("\r\nPercent Trailing SELL");
                 Sell(Lots, _level1.Bid, OrderTypeMarket);
             }
 
 
-	        else if (_canCheckForTrailingStop && _position.NetVolume < 0)
-	        {
+            else if (_position.NetVolume < 0 && _level1.Ask <= _lastPrice - Earned * Point)
+            {
                 var stop = _lowestAsk + PercentDown * Point;
+                txbAccounts.AppendText("\r\nWill get out of SHORT position at Trailing Stop: " + stop);
                 if (_level1.Ask < stop) return;
                 tbxAll.AppendText("\r\nPercent Trailing BUY");
                 Buy(Lots, _level1.Ask, OrderTypeMarket);
@@ -242,29 +245,45 @@ namespace QJExternalTool
 
         }
 
-	    private void CheckStopLoss()
-	    {
-	        if (_position.NetVolume > 0 && _level1.Bid <= _lastPrice - MaxDrawdown*Point)
-	        {
-	            tbxAll.AppendText("\r\nStop Loss SELL");
-	            Sell(Lots, _level1.Bid, OrderTypeMarket);
-	        }
-	        else if (_position.NetVolume < 0 && _level1.Ask > _lastPrice + MaxDrawdown*Point)
-	        {
-	            tbxAll.AppendText("\r\nStop Loss BUY");
-	            Buy(Lots, _level1.Ask, OrderTypeMarket);
-	        }
-	    }
+        private void CheckStopLoss()
+        {
+            var longStop = _lastPrice - MaxDrawdown * Point;
+            var shortStop = _lastPrice + MaxDrawdown * Point;
 
 
-	    //Ordering functions
-	    private void Buy(int orderSize, decimal price, string orderType) => CreateOrder(SideEnum.BUY, orderSize, price, orderType);
+            if (_position.NetVolume > 0)
+            {
+
+                txbAccounts.AppendText("\r\nWill get out of LONG position at Stop Loss: " + longStop);
+
+                if (_level1.Bid > longStop) return;
+
+                tbxAll.AppendText("\r\nStop Loss SELL");
+                Sell(Lots, _level1.Bid, OrderTypeMarket);
+            }
+            else if (_position.NetVolume < 0)
+            {
+
+                txbAccounts.AppendText("\r\nWill get out of SHORT position at Stop Loss: " + shortStop);
+
+                if (_level1.Ask < shortStop) return;
+
+                tbxAll.AppendText("\r\nStop Loss BUY");
+                Buy(Lots, _level1.Ask, OrderTypeMarket);
+            }
+        }
+
+
+
+        //Ordering functions
+        private void Buy(int orderSize, decimal price, string orderType) => CreateOrder(SideEnum.BUY, orderSize, price, orderType);
 
 	    private void Sell(int orderSize, decimal price, string orderType) => CreateOrder(SideEnum.SELL, orderSize, price, orderType);
 
 	    private void CreateOrder(SideEnum sideEnum, int size, decimal price, string orderType)
 	    {
-	        tbxAll.AppendText("\r\nORDER!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+            _candlestickChart.Signal = CandlestickChart.Signals.None;
+            tbxAll.AppendText("\r\nORDER!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
 
 	        _order = _host.CreateOrder(Product, sideEnum, size, price, TimeInForceEnum.GTC, orderType);
 
