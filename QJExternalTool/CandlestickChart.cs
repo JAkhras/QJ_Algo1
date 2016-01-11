@@ -1,19 +1,14 @@
 using System;
 using System.Collections.Generic;
-using System.Data;
-using System.Data.SqlClient;
 using System.Linq;
-using System.Text;
+using System.Windows.Forms;
+using Excel = Microsoft.Office.Interop.Excel;
 using Timer = System.Timers.Timer;
 
 namespace QJExternalTool
 {
     public class CandlestickChart
     {
-
-        private const string ConnectionString =
-            "Data Source=h98ohmld2f.database.windows.net;Initial Catalog = QJTraderCandlesticks; Integrated Security = False; User ID = JMSXTech; Password=jmsx!2014;Connect Timeout = 60; Encrypt=False;TrustServerCertificate=False;ApplicationIntent=ReadWrite;MultiSubnetFailover=False";
-
         public enum Point
         {
             Open, Close, High, Low
@@ -29,19 +24,20 @@ namespace QJExternalTool
             Up, Down
         }
 
-        private readonly string _product;
+        public enum Signals
+        {
+            Buy, Sell, None
+        }
 
         public List<Candlestick> Candlesticks5 { get; }
         public List<Candlestick> Candlesticks15 { get; }
         public List<Candlestick> Candlesticks60 { get; }
 
-        public List<Candlestick> NewCandlesticks { get; set; }
-
         private int _frequency;
 
-        private Candlestick _currentCandlestick5;
-        private Candlestick _currentCandlestick15;
-        private Candlestick _currentCandlestick60;
+        public Candlestick CurrentCandlestick5 { get; set; }
+        public Candlestick CurrentCandlestick15 { get; set; }
+        public Candlestick CurrentCandlestick60 { get; set; }
 
         private readonly int _fastLength;
         private readonly int _slowLength;
@@ -49,9 +45,11 @@ namespace QJExternalTool
         public decimal HighAtSignal { get; private set; }
         public decimal LowAtSignal { get; private set; }
 
-        public Trends Trend { get; private set; }
+        public Signals Signal { get; private set; }
 
         public decimal Fast { get; private set; }
+
+        private TextBox _box;
 
         private decimal _slow;
         public decimal Slow
@@ -67,9 +65,10 @@ namespace QJExternalTool
                 if (crossedUp || crossedDown)
                 {
                     HighAtSignal = High(CandleFrequency.Candles5, 1);
+                    _box.AppendText("\r\nHighAtSignal:" + HighAtSignal);
                     LowAtSignal = Low(CandleFrequency.Candles5, 1);
-
-                    Trend = crossedUp ? Trends.Up : Trends.Down;
+                    _box.AppendText("\r\nLowAtSignal:" + LowAtSignal);
+                    Signal = crossedUp ? Signals.Buy : Signals.Sell;
 
                 }
 
@@ -81,70 +80,63 @@ namespace QJExternalTool
         private decimal _lastFast;
         private decimal _lastSlow;
 
-        public CandlestickChart(string product, int timerInterval, int fastLength, int slowLength)
+        public CandlestickChart(string product, int timerInterval, int fastLength, int slowLength, TextBox box)
         {
-            _product = product;
+
+            _box = box;
 
             _fastLength = fastLength;
             _slowLength = slowLength;
 
-            var connection = new SqlConnection(ConnectionString);
-
-            var command = new SqlCommand("SELECT O, C, H, L, Frequency, Year FROM " + _product + ";")
-            {
-                CommandType = CommandType.Text
-            };
-
-            connection.Open();
-
-            command.Connection = connection;
-
-            var reader = command.ExecuteReader();
 
             Candlesticks5 = new List<Candlestick>();
             Candlesticks15 = new List<Candlestick>();
             Candlesticks60 = new List<Candlestick>();
-            NewCandlesticks = new List<Candlestick>();
 
-            while (reader.Read())
+            var excelApp = new Excel.Application {Visible = true};
+
+            var excelWorkbook = excelApp.Workbooks.Open(product,
+        0, false, 5, "", "", false, Excel.XlPlatform.xlWindows, "",
+        true, false, 0, true, false, false);
+
+            var excelSheets = excelWorkbook.Worksheets;
+
+            var excelWorksheet = (Excel.Worksheet)excelSheets.Item["ES"];
+
+            var excelRange = excelWorksheet.Range["K3", "N29"];
+
+            for (var i = 1; i <= 27; ++i)
             {
-                var frequency = reader.GetInt32(reader.GetOrdinal("Frequency"));
 
-                var candlestick = new Candlestick(frequency)
+                var candlestick5 = new Candlestick(5)
                 {
-                    Frequency = frequency,
-                    Open = reader.GetDecimal(reader.GetOrdinal("O")),
-                    Close = reader.GetDecimal(reader.GetOrdinal("C")),
-                    High = reader.GetDecimal(reader.GetOrdinal("H")),
-                    Low = reader.GetDecimal(reader.GetOrdinal("L")),
-                    Year = reader.GetInt32(reader.GetOrdinal("Year"))
+                    IsNull = false,
+                    High = (decimal) ((Excel.Range) excelRange.Cells[i, 1]).Value2,
+                    Low = (decimal) ((Excel.Range) excelRange.Cells[i, 3]).Value2,
+                    Open = (decimal) ((Excel.Range) excelRange.Cells[i, 4]).Value2,
+                    Close = (decimal) ((Excel.Range) excelRange.Cells[i, 2]).Value2
                 };
 
-                switch (frequency)
-                {
-                    case 5:
-                        Candlesticks5.Add(candlestick);
-                        break;
-                    case 15:
-                        Candlesticks15.Add(candlestick);
-                        break;
-                    default:
-                        Candlesticks60.Add(candlestick);
-                        break;
-                }
-
+                Candlesticks5.Add(candlestick5);
             }
 
-            reader.Dispose();
-            command.Dispose();
-            connection.Dispose();
+            excelWorkbook.Close();
+            excelApp.Quit();
+
+            ReleaseObject(excelWorksheet);
+            ReleaseObject(excelWorkbook);
+            ReleaseObject(excelApp);
+
+            Candlesticks5.Reverse();
 
             _frequency = 0;
 
-            _currentCandlestick5 = new Candlestick(5);
-            _currentCandlestick15 = new Candlestick(15);
-            _currentCandlestick60 = new Candlestick(60);
+            CurrentCandlestick5 = new Candlestick(5);
+            CurrentCandlestick15 = new Candlestick(15);
+            CurrentCandlestick60 = new Candlestick(60);
 
+            foreach (var c in Candlesticks5)
+                box.AppendText("\r\n High:" + c.High + " Low:" + c.Low + " Open:" + c.Open + " Close:" + c.Close);
 
             Fast = AverageLast(Point.Close, _fastLength, CandleFrequency.Candles5);
             Slow = AverageLast(Point.Close, _fastLength, CandleFrequency.Candles5);
@@ -159,52 +151,51 @@ namespace QJExternalTool
             timer.Elapsed += TimerOnTick;
             timer.Start();
 
+            //Signal = Signals.None;
+
         }
+
+        private static void ReleaseObject(object obj)
+        {
+            try
+            {
+                System.Runtime.InteropServices.Marshal.ReleaseComObject(obj);
+            }
+            catch
+            {
+                // ignored
+            }
+            finally
+            {
+                GC.Collect();
+            }
+        }
+
 
         private void TimerOnTick(object sender, EventArgs eventArgs)
         {
 
-            Save();
-
-            if (DateTime.Now.Hour >= 16)
-            {
-                Save();
-            }
-
             _frequency += 5;
 
-            if (!_currentCandlestick5.IsNull)
-            {
-                Candlesticks5.Add(_currentCandlestick5);
-                NewCandlesticks.Add(_currentCandlestick5);
-            }
-            _currentCandlestick5 = new Candlestick(5);
+            if (!CurrentCandlestick5.IsNull)
+                Candlesticks5.Add(CurrentCandlestick5);
+            CurrentCandlestick5 = new Candlestick(5);
 
 
             if (_frequency % 15 == 0)
             {
-                if (!_currentCandlestick15.IsNull)
-                {
-                    Candlesticks15.Add(_currentCandlestick15);
-                    NewCandlesticks.Add(_currentCandlestick15);
-                }
-                _currentCandlestick15 = new Candlestick(15);
+                if (!CurrentCandlestick15.IsNull)
+                    Candlesticks15.Add(CurrentCandlestick15);
+                CurrentCandlestick15 = new Candlestick(15);
 
             }
 
-            if (_frequency == 60)
-            {
-                if (!_currentCandlestick60.IsNull)
-                {
-                    Candlesticks60.Add(_currentCandlestick60);
-                    NewCandlesticks.Add(_currentCandlestick60);
-                }
-                _currentCandlestick60 = new Candlestick(60);
+            if (_frequency != 60) return;
+            if (!CurrentCandlestick60.IsNull)
+                Candlesticks60.Add(CurrentCandlestick60);
+            CurrentCandlestick60 = new Candlestick(60);
 
-                _frequency = 0;
-            }
-
-
+            _frequency = 0;
         }
 
         public List<Candlestick> Last(int n, CandleFrequency candleFrequency)
@@ -225,15 +216,15 @@ namespace QJExternalTool
             {
                 case CandleFrequency.Candles5:
                     candlesticksFrequency = Candlesticks5;
-                    currentCandlestick = _currentCandlestick5;
+                    currentCandlestick = CurrentCandlestick5;
                     break;
                 case CandleFrequency.Candles15:
                     candlesticksFrequency = Candlesticks15;
-                    currentCandlestick = _currentCandlestick15;
+                    currentCandlestick = CurrentCandlestick15;
                     break;
                 case CandleFrequency.Candles60:
                     candlesticksFrequency = Candlesticks60;
-                    currentCandlestick = _currentCandlestick60;
+                    currentCandlestick = CurrentCandlestick60;
                     break;
                 default:
                     return null;
@@ -270,40 +261,6 @@ namespace QJExternalTool
                 default:
                     return 0;
             }
-        }
-
-        public void Save()
-        {
-            var stringBuilder = new StringBuilder();
-
-            foreach (var candlestick in NewCandlesticks)
-                stringBuilder.AppendLine("INSERT INTO " + _product + " (O, C, H, L, Frequency, Year) VALUES (" + candlestick.Open + ", " + candlestick.Close + ", " + candlestick.High + ", " + candlestick.Low + ", " + candlestick.Frequency + ", " + candlestick.Year + ");");
-
-
-            if (stringBuilder.ToString() == string.Empty)
-                return;
-            try
-            {
-                var connection = new SqlConnection(ConnectionString);
-
-                var command = new SqlCommand(stringBuilder.ToString()) {CommandType = CommandType.Text};
-
-                connection.Open();
-
-                command.Connection = connection;
-
-                command.ExecuteNonQuery();
-
-                command.Dispose();
-                connection.Dispose();
-            }
-
-            catch (Exception e)
-            {
-                //tbxAll.AppendText("\r\n" + e);
-            }
-
-            NewCandlesticks.Clear();
         }
 
         public decimal High(CandleFrequency candleFrequency, int n)
@@ -368,9 +325,10 @@ namespace QJExternalTool
 
         public void Update(decimal last)
         {
-            _currentCandlestick5.Update(last);
-            _currentCandlestick15.Update(last);
-            _currentCandlestick60.Update(last);
+            
+            CurrentCandlestick5.Update(last);
+            CurrentCandlestick15.Update(last);
+            CurrentCandlestick60.Update(last);
 
             Fast = AverageLast(Point.Close, _fastLength, CandleFrequency.Candles5);
             Slow = AverageLast(Point.Close, _slowLength, CandleFrequency.Candles5);

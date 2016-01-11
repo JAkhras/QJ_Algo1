@@ -49,14 +49,14 @@
             this.txbAccounts.Multiline = true;
             this.txbAccounts.Name = "txbAccounts";
             this.txbAccounts.ReadOnly = true;
-            this.txbAccounts.Size = new System.Drawing.Size(349, 103);
+            this.txbAccounts.Size = new System.Drawing.Size(349, 213);
             this.txbAccounts.TabIndex = 48;
             // 
             // TestTool
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(375, 534);
+            this.ClientSize = new System.Drawing.Size(375, 613);
             this.Controls.Add(this.txbAccounts);
             this.Controls.Add(this.tbxAll);
             this.Name = "TestTool";
