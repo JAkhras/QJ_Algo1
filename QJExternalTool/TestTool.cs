@@ -1,5 +1,6 @@
 ﻿#region using
 using System;
+using System.Text;
 using System.Windows.Forms;
 using QJInterface;
 
@@ -40,17 +41,18 @@ namespace QJExternalTool
 	    private decimal _highestBid;
 	    private decimal _lowestAsk;
 
+
+	    private readonly StringBuilder _stringBuilder;
+
+
 	    //Candlestick stuff
-	    private const string Product = "/ES H6.CME";
-
-        private const string File = @"Z:\DATA.ES+EC1.1.xlsm";
-
-
-
 	    private readonly CandlestickChart _candlestickChart;
 
         //Algo inputs
-	    private const int TimeStart = 9;
+        private const string Product = "/ES H6.CME";
+        private const string File = @"Z:\DATA.ES+EC1.1.xlsm";
+
+        private const int TimeStart = 9;
 	    private const int TimeDuration = 14;
 	    private const int FastLength = 9;
 	    private const int SlowLength = 27;
@@ -71,6 +73,9 @@ namespace QJExternalTool
         #region Constructor
         public TestTool(IHost host)
 		{
+
+            _stringBuilder = new StringBuilder();
+
             InitializeComponent();
 
 			_host = host;
@@ -78,17 +83,14 @@ namespace QJExternalTool
             _position = _host.GetPosition(Product);
             _level1 = _host.GetLevel1(Product);
 
-
-
             _level1.Level1Changed += Level1_Level1Changed;
-
-
-
 
             _candlestickChart = new CandlestickChart(File, TimerInterval, FastLength, SlowLength, tbxAll);
 
             //Set up candlestick
             _lastVolume = _level1.Volume;
+
+            
 
         }
 
@@ -101,7 +103,7 @@ namespace QJExternalTool
 		// This function is call when the information in the SymbolLevel1 changed.
 	    private void Level1_Level1Changed(ILevel1 level1)
 	    {
-
+	        _stringBuilder.Clear();
 
             var bid = level1.Bid;
 	        var ask = level1.Ask;
@@ -124,14 +126,14 @@ namespace QJExternalTool
             Algorithm();
             CheckStops();
 
-		}
+	        txbAccounts.Text = _stringBuilder.ToString();
+
+	    }
 
         //Algorithm
 	    private void Algorithm()
 	    {
-            txbAccounts.Text = "Level1 CHanged with VOlume: " + _lastVolume;
-            txbAccounts.AppendText("\r\nCandlestick chart count: " + _candlestickChart.Candlesticks5.Count);
-            txbAccounts.AppendText("\r\nAlgo running");
+	        _stringBuilder.Append("Algo running");
 
             if (_candlestickChart.Candlesticks5.Count < SlowLength)
 	            return;
@@ -140,31 +142,27 @@ namespace QJExternalTool
 
 	        if (time < TimeStart || time >= TimeStart + TimeDuration) return;
 
-            txbAccounts.AppendText("\r\n High:" + _candlestickChart.CurrentCandlestick5.High + " Low:" + _candlestickChart.CurrentCandlestick5.Low + " Open:" + _candlestickChart.CurrentCandlestick5.Open + " Close:" + _candlestickChart.CurrentCandlestick5.Close);
-            txbAccounts.AppendText("\r\nFast: " + _candlestickChart.Fast );
-            txbAccounts.AppendText("\r\nSlow: " + _candlestickChart.Slow );
-            txbAccounts.AppendText("\r\nSignal: " + _candlestickChart.Signal);
+            _stringBuilder.Append("\r\nFast: " + _candlestickChart.Fast.ToString("F"));
+            _stringBuilder.Append("\r\nSlow: " + _candlestickChart.Slow .ToString("F"));
+            _stringBuilder.Append("\r\nSignal: " + _candlestickChart.Signal);
 
-	        var coefficient = _position.NetVolume == 0 ? 0 : 1;
-
-            var orderSize = (Lots + (Lots*coefficient));
+            var orderSize = Lots + Lots*(_position.NetVolume == 0 ? 0 : 1);
 
             switch (_candlestickChart.Signal)
             {
                 case CandlestickChart.Signals.Buy:
 
-                    txbAccounts.AppendText("\r\nUp Trend");
+                    _stringBuilder.Append("\r\nUp Trend");
 
                     var buyStop = _candlestickChart.HighAtSignal + Point;
                     var buyLimit = _candlestickChart.HighAtSignal + 5*Point;
 
-                    txbAccounts.AppendText("\r\nL1 Ask: " + _level1.Ask + " >= " + " Buy Stop: " + buyStop + " && " + _level1.AskSize + " > " + (orderSize*2));
-                    txbAccounts.AppendText("\r\nL1 Ask: " + _level1.Ask + " < " + " Buy Limit: " + buyLimit);
+                    _stringBuilder.Append("\r\nAsk: " + _level1.Ask + " >= " + " Buy Stop: " + buyStop + " && Buy Limit: " + buyLimit);
 
                     //buy;
-                    if (_position.NetVolume > 0 || _level1.Ask < buyStop || _level1.Ask >= buyLimit) return;
-                    tbxAll.AppendText("\r\nShould BUY at:" + DateTime.Now);
+                    if (_position.NetVolume > 0 || _level1.Ask < buyStop || _level1.Ask >= buyLimit) return;                   
                     Buy(orderSize, buyStop, OrderTypeLimit);
+                    tbxAll.AppendText("\r\nBOT " + orderSize + " at " + _lastPrice + " @ " + DateTime.Now);
                     break;
 
                 case CandlestickChart.Signals.Sell:
@@ -174,14 +172,12 @@ namespace QJExternalTool
                     var sellStop = _candlestickChart.LowAtSignal - Point;
                     var sellLimit = _candlestickChart.LowAtSignal - 5 * Point;
 
-                    txbAccounts.AppendText("\r\nL1 Bid: " + _level1.Bid + " <= " + " Sell Stop: " + sellStop + " && " + _level1.BidSize + " > " + (orderSize * 2));
-                    txbAccounts.AppendText("\r\nL1 Bid: " + _level1.Bid + " > " + " Sell Limit: " + sellLimit);
-
+                    _stringBuilder.Append("\r\nL1 Bid: " + _level1.Bid + " <= " + " Sell Stop: " + sellStop + " && Sell Limit: " + sellLimit);
 
                     //sell;
                     if (_position.NetVolume < 0 || _level1.Bid > sellStop || _level1.Bid <= sellLimit) return;
-                    tbxAll.AppendText("\r\nShould SELL at: " + DateTime.Now);
                     Sell(orderSize, sellStop, OrderTypeLimit);
+                    tbxAll.AppendText("\r\nSLD " + orderSize + " at " + _lastPrice + " @ " + DateTime.Now);
                     break;
 
                 case CandlestickChart.Signals.None:
@@ -205,14 +201,14 @@ namespace QJExternalTool
 	    {
 	        if (_position.NetVolume > 0 && _level1.Bid >= _lastPrice + DollarProfitTarget*Point)
 	        {
-	            tbxAll.AppendText("\r\nProfit Target SELL");
 	            Sell(Lots, _level1.Bid, OrderTypeMarket);
-	        }
+                tbxAll.AppendText("\r\nProfit Target SLD " + Lots + " at " + _lastPrice + " @ " + DateTime.Now);
+            }
 	        else if (_position.NetVolume < 0 && _level1.Ask <= _lastPrice - DollarProfitTarget*Point)
 	        {
-	            tbxAll.AppendText("\r\nProfit Target BUY");
-	            Buy(Lots, _level1.Ask, OrderTypeMarket);
-	        }
+                Buy(Lots, _level1.Ask, OrderTypeMarket);
+                tbxAll.AppendText("\r\nProfit Target BOT " + Lots + " at " + _lastPrice + " @ " + DateTime.Now);
+            }
 	    }
 
         private void CheckPercentTrailing()
@@ -229,20 +225,20 @@ namespace QJExternalTool
 
             {
                 var stop = _highestBid - PercentDown * Point;
-                txbAccounts.AppendText("\r\nWill get out of LONG position at Trailing Stop: " + stop);
+                _stringBuilder.Append("\r\nWill get out of LONG position at Trailing Stop: " + stop);
                 if (_level1.Bid > stop) return;
-                tbxAll.AppendText("\r\nPercent Trailing SELL");
                 Sell(Lots, _level1.Bid, OrderTypeMarket);
+                tbxAll.AppendText("\r\nTrailing Stop SLD " + Lots + " at " + _lastPrice + " @ " + DateTime.Now);
             }
 
 
             else if (_position.NetVolume < 0)
             {
                 var stop = _lowestAsk + PercentDown * Point;
-                txbAccounts.AppendText("\r\nWill get out of SHORT position at Trailing Stop: " + stop);
+                _stringBuilder.Append("\r\nWill get out of SHORT position at Trailing Stop: " + stop);
                 if (_level1.Ask < stop) return;
-                tbxAll.AppendText("\r\nPercent Trailing BUY");
                 Buy(Lots, _level1.Ask, OrderTypeMarket);
+                tbxAll.AppendText("\r\nTrailing Stop BOT " + Lots + " at " + _lastPrice + " @ " + DateTime.Now);
 
             }
 
@@ -258,22 +254,20 @@ namespace QJExternalTool
             if (_position.NetVolume > 0)
             {
 
-                txbAccounts.AppendText("\r\nWill get out of LONG position at Stop Loss: " + longStop);
+                _stringBuilder.Append("\r\nWill get out of LONG position at Stop Loss: " + longStop);
 
                 if (_level1.Bid > longStop) return;
-
-                tbxAll.AppendText("\r\nStop Loss SELL");
                 Sell(Lots, _level1.Bid, OrderTypeMarket);
+                tbxAll.AppendText("\r\nStop Loss SLD " + Lots + " at " + _lastPrice + " @ " + DateTime.Now);
             }
             else if (_position.NetVolume < 0)
             {
 
-                txbAccounts.AppendText("\r\nWill get out of SHORT position at Stop Loss: " + shortStop);
+                _stringBuilder.Append("\r\nWill get out of SHORT position at Stop Loss: " + shortStop);
 
                 if (_level1.Ask < shortStop) return;
-
-                tbxAll.AppendText("\r\nStop Loss BUY");
                 Buy(Lots, _level1.Ask, OrderTypeMarket);
+                tbxAll.AppendText("\r\nStop Loss BOT " + Lots + " at " + _lastPrice + " @ " + DateTime.Now);
             }
         }
 
@@ -288,7 +282,6 @@ namespace QJExternalTool
 	    {
             _candlestickChart.Signal = CandlestickChart.Signals.None;
 	        _canCheckForTrailingStop = false;
-            tbxAll.AppendText("\r\nORDER!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
 
 	        _order = _host.CreateOrder(Product, sideEnum, size, price, TimeInForceEnum.GTC, orderType);
 
