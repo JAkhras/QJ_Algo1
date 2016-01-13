@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Windows.Forms;
+using QJInterface;
 using Excel = Microsoft.Office.Interop.Excel;
 using Timer = System.Timers.Timer;
 
@@ -50,6 +51,7 @@ namespace QJExternalTool
         public decimal Fast { get; private set; }
 
         private TextBox _box;
+        private int _lastVolume;
 
         private decimal _slow;
         public decimal Slow
@@ -78,9 +80,10 @@ namespace QJExternalTool
         private decimal _lastFast;
         private decimal _lastSlow;
 
-        public CandlestickChart(string product, int timerInterval, int fastLength, int slowLength, TextBox box)
+        public CandlestickChart(string product, int timerInterval, int fastLength, int slowLength, ILevel1 level1, TextBox box)
         {
 
+            _lastVolume = level1.Volume;
             _box = box;
 
             _fastLength = fastLength;
@@ -146,8 +149,20 @@ namespace QJExternalTool
             timer.Elapsed += TimerOnTick;
             timer.Start();
 
-            //Signal = Signals.None;
+            Signal = Signals.None;
 
+            level1.Level1Changed += Level1OnLevel1Changed;
+
+        }
+
+        private void Level1OnLevel1Changed(ILevel1 level1)
+        {
+            var volume = level1.Volume;
+
+            //updating candlestick
+            if (_lastVolume == volume) return;
+            _lastVolume = volume;
+            Update(level1.Last);
         }
 
         private static void ReleaseObject(object obj)

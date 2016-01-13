@@ -32,10 +32,10 @@ namespace QJExternalTool
 	    private readonly IPosition _position;
 
         private OrderStateEnum _orderState;
+	    private bool _isLock;
 
         private decimal _lastPrice;
 
-        private int _lastVolume;
 	    private bool _canCheckForTrailingStop;
 
 	    private decimal _highestBid;
@@ -83,18 +83,11 @@ namespace QJExternalTool
             _position = _host.GetPosition(Product);
             _level1 = _host.GetLevel1(Product);
 
+            _candlestickChart = new CandlestickChart(File, TimerInterval, FastLength, SlowLength, _level1, tbxAll);
+
             _level1.Level1Changed += Level1_Level1Changed;
 
-            _candlestickChart = new CandlestickChart(File, TimerInterval, FastLength, SlowLength, tbxAll);
-
-            //Set up candlestick
-            _lastVolume = _level1.Volume;
-
-            
-
         }
-
-
 
 	    #endregion
 
@@ -103,7 +96,6 @@ namespace QJExternalTool
 		// This function is call when the information in the SymbolLevel1 changed.
 	    private void Level1_Level1Changed(ILevel1 level1)
 	    {
-	        _stringBuilder.Clear();
 
             var bid = level1.Bid;
 	        var ask = level1.Ask;
@@ -114,14 +106,11 @@ namespace QJExternalTool
 	        if (ask < _lowestAsk)
 	            _lowestAsk = ask;
 
-	        var volume = level1.Volume;
+	        if (_isLock) return;
 
-            //updating candlestick
-            if (_lastVolume != volume)
-            {
-                _lastVolume = volume;
-                _candlestickChart.Update(level1.Last);
-            }
+	        _isLock = true;
+
+            _stringBuilder.Clear();
 
             Algorithm();
             CheckStops();
@@ -161,7 +150,7 @@ namespace QJExternalTool
 
                     //buy;
                     if (_position.NetVolume > 0 || _level1.Ask < buyStop || _level1.Ask >= buyLimit) return;                   
-                    Buy(orderSize, buyStop, OrderTypeLimit);
+                    Buy(orderSize, buyStop, OrderTypeMarket);
                     tbxAll.AppendText("\r\nBOT " + orderSize + " at " + _lastPrice + " @ " + DateTime.Now);
                     break;
 
@@ -176,7 +165,7 @@ namespace QJExternalTool
 
                     //sell;
                     if (_position.NetVolume < 0 || _level1.Bid > sellStop || _level1.Bid <= sellLimit) return;
-                    Sell(orderSize, sellStop, OrderTypeLimit);
+                    Sell(orderSize, sellStop, OrderTypeMarket);
                     tbxAll.AppendText("\r\nSLD " + orderSize + " at " + _lastPrice + " @ " + DateTime.Now);
                     break;
 
@@ -242,7 +231,6 @@ namespace QJExternalTool
 
             }
 
-
         }
 
         private void CheckStopLoss()
@@ -270,8 +258,6 @@ namespace QJExternalTool
                 tbxAll.AppendText("\r\nStop Loss BOT " + Lots + " at " + _lastPrice + " @ " + DateTime.Now);
             }
         }
-
-
 
         //Ordering functions
         private void Buy(int orderSize, decimal price, string orderType) => CreateOrder(SideEnum.BUY, orderSize, price, orderType);
@@ -335,7 +321,7 @@ namespace QJExternalTool
 	                _lastPrice = lastPrice;
 	                _highestBid = _level1.Bid;
 	                _lowestAsk = _level1.Ask;
-
+	                _isLock = false;
 	                break;
 
 	                #endregion
