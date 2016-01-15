@@ -10,13 +10,11 @@ namespace QJExternalTool
         public decimal High { get; set; }
         public decimal Low { get; set; }
         public bool IsNull { get; set; }
-        public int Frequency { get; set; }
         public int Year { get; set; }
 
-        public Candlestick(int frequency)
+        public Candlestick()
         {
             IsNull = true;
-            Frequency = frequency;
             Open = -1;
             Close = -1;
             High = -1;
