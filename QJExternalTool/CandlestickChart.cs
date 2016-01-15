@@ -20,11 +20,6 @@ namespace QJExternalTool
             Candles5, Candles15, Candles60
         }
 
-        public enum Trends
-        {
-            Up, Down
-        }
-
         public enum Signals
         {
             Buy, Sell, None
@@ -36,9 +31,9 @@ namespace QJExternalTool
 
         private int _frequency;
 
-        public Candlestick CurrentCandlestick5 { get; set; }
-        public Candlestick CurrentCandlestick15 { get; set; }
-        public Candlestick CurrentCandlestick60 { get; set; }
+        public Candlestick CurrentCandlestick5 { get; private set; }
+        public Candlestick CurrentCandlestick15 { get; private set; }
+        public Candlestick CurrentCandlestick60 { get; private set; }
 
         private readonly int _fastLength;
         private readonly int _slowLength;
@@ -46,7 +41,7 @@ namespace QJExternalTool
         public decimal HighAtSignal { get; private set; }
         public decimal LowAtSignal { get; private set; }
 
-        public Signals Signal { get; set; }
+        public Signals Signal { get; private set; }
 
         public decimal Fast { get; private set; }
 
@@ -81,7 +76,7 @@ namespace QJExternalTool
         private decimal _lastFast;
         private decimal _lastSlow;
 
-        private ILevel1 _level1;
+        private readonly ILevel1 _level1;
 
         public CandlestickChart(string product, int timerInterval, int fastLength, int slowLength, ILevel1 level1, TextBox box)
         {
@@ -112,7 +107,7 @@ namespace QJExternalTool
 
             var excelRange = excelWorksheet.Range["K3", "N29"];
 
-            for (var i = 1; i <= 27; ++i)
+            for (var i = 1; i <= _slowLength; ++i)
             {
 
                 var candlestick5 = new Candlestick()
