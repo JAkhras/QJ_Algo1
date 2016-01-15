@@ -64,7 +64,7 @@ namespace QJExternalTool
         private const int MaxDrawdown = 17;
         private const int DollarProfitTarget = 40;
         private const int Earned = 20;
-	    private const int PercentDown = 10;
+	    private const int PercentDown = 16;
 
         private const int Lots = 1;
 
