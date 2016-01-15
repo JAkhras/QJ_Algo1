@@ -20,11 +20,6 @@ namespace QJExternalTool
             Candles5, Candles15, Candles60
         }
 
-        public enum Trends
-        {
-            Up, Down
-        }
-
         public enum Signals
         {
             Buy, Sell, None
@@ -36,9 +31,9 @@ namespace QJExternalTool
 
         private int _frequency;
 
-        public Candlestick CurrentCandlestick5 { get; set; }
-        public Candlestick CurrentCandlestick15 { get; set; }
-        public Candlestick CurrentCandlestick60 { get; set; }
+        public Candlestick CurrentCandlestick5 { get; private set; }
+        public Candlestick CurrentCandlestick15 { get; private set; }
+        public Candlestick CurrentCandlestick60 { get; private set; }
 
         private readonly int _fastLength;
         private readonly int _slowLength;
@@ -46,11 +41,12 @@ namespace QJExternalTool
         public decimal HighAtSignal { get; private set; }
         public decimal LowAtSignal { get; private set; }
 
-        public Signals Signal { get; set; }
+        public Signals Signal { get; private set; }
 
         public decimal Fast { get; private set; }
 
         private TextBox _box;
+
         private int _lastVolume;
 
         private decimal _slow;
@@ -61,8 +57,8 @@ namespace QJExternalTool
             {
                 _slow = value;
 
-                var crossedUp = Fast > value && _lastFast <= _lastSlow;
-                var crossedDown = Fast < value && _lastFast >= _lastSlow;
+                var crossedUp = Fast > value && _lastFast < _lastSlow;
+                var crossedDown = Fast < value && _lastFast > _lastSlow;
 
                 if (crossedUp || crossedDown)
                 {
@@ -80,11 +76,16 @@ namespace QJExternalTool
         private decimal _lastFast;
         private decimal _lastSlow;
 
+        private readonly ILevel1 _level1;
+
         public CandlestickChart(string product, int timerInterval, int fastLength, int slowLength, ILevel1 level1, TextBox box)
         {
 
-            _lastVolume = level1.Volume;
+            
             _box = box;
+            _level1 = level1;
+
+            _lastVolume = _level1.Volume;
 
             _fastLength = fastLength;
             _slowLength = slowLength;
@@ -106,10 +107,10 @@ namespace QJExternalTool
 
             var excelRange = excelWorksheet.Range["K3", "N29"];
 
-            for (var i = 1; i <= 27; ++i)
+            for (var i = 1; i <= _slowLength; ++i)
             {
 
-                var candlestick5 = new Candlestick(5)
+                var candlestick5 = new Candlestick()
                 {
                     IsNull = false,
                     High = (decimal) ((Excel.Range) excelRange.Cells[i, 1]).Value2,
@@ -132,9 +133,9 @@ namespace QJExternalTool
 
             _frequency = 0;
 
-            CurrentCandlestick5 = new Candlestick(5);
-            CurrentCandlestick15 = new Candlestick(15);
-            CurrentCandlestick60 = new Candlestick(60);
+            CurrentCandlestick5 = new Candlestick();
+            CurrentCandlestick15 = new Candlestick();
+            CurrentCandlestick60 = new Candlestick();
 
             Fast = AverageLast(Point.Close, _fastLength, CandleFrequency.Candles5);
             Slow = AverageLast(Point.Close, _fastLength, CandleFrequency.Candles5);
@@ -146,23 +147,12 @@ namespace QJExternalTool
                 Enabled = false,
                 AutoReset = true
             };
+
             timer.Elapsed += TimerOnTick;
-            timer.Start();
 
             Signal = Signals.None;
+            timer.Start();
 
-            level1.Level1Changed += Level1OnLevel1Changed;
-
-        }
-
-        private void Level1OnLevel1Changed(ILevel1 level1)
-        {
-            var volume = level1.Volume;
-
-            //updating candlestick
-            if (_lastVolume == volume) return;
-            _lastVolume = volume;
-            Update(level1.Last);
         }
 
         private static void ReleaseObject(object obj)
@@ -189,21 +179,21 @@ namespace QJExternalTool
 
             if (!CurrentCandlestick5.IsNull)
                 Candlesticks5.Add(CurrentCandlestick5);
-            CurrentCandlestick5 = new Candlestick(5);
+            CurrentCandlestick5 = new Candlestick();
 
 
             if (_frequency % 15 == 0)
             {
                 if (!CurrentCandlestick15.IsNull)
                     Candlesticks15.Add(CurrentCandlestick15);
-                CurrentCandlestick15 = new Candlestick(15);
+                CurrentCandlestick15 = new Candlestick();
 
             }
 
             if (_frequency != 60) return;
             if (!CurrentCandlestick60.IsNull)
                 Candlesticks60.Add(CurrentCandlestick60);
-            CurrentCandlestick60 = new Candlestick(60);
+            CurrentCandlestick60 = new Candlestick();
 
             _frequency = 0;
         }
@@ -333,9 +323,16 @@ namespace QJExternalTool
             }
         }
 
-        public void Update(decimal last)
+        public void Update()
         {
-            
+
+            var volume = _level1.Volume;
+
+            if (volume == _lastVolume) return;
+
+            _lastVolume = volume;
+            var last = _level1.Last;
+
             CurrentCandlestick5.Update(last);
             CurrentCandlestick15.Update(last);
             CurrentCandlestick60.Update(last);

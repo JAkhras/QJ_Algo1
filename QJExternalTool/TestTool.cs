@@ -41,7 +41,6 @@ namespace QJExternalTool
 	    private decimal _highestBid;
 	    private decimal _lowestAsk;
 
-
 	    private readonly StringBuilder _stringBuilder;
 
 
@@ -106,7 +105,9 @@ namespace QJExternalTool
 	        if (ask < _lowestAsk)
 	            _lowestAsk = ask;
 
-	        if (_isLock) return;
+            _candlestickChart.Update();
+
+            if (_isLock) return;
 
 	        _isLock = true;
 
@@ -439,7 +440,10 @@ namespace QJExternalTool
 	                _orderState = OrderStateEnum.PENDING_REPLACE;
 	                break;
 
-	                #endregion
+                #endregion
+                default:
+                    throw new ArgumentOutOfRangeException();
+
 	        }
 	    }
 

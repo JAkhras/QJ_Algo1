@@ -66,6 +66,7 @@
     <Compile Include="TestTool.Designer.cs">
       <DependentUpon>TestTool.cs</DependentUpon>
     </Compile>
+    <Compile Include="Trade.cs" />
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="TestTool.resx">
