@@ -112,9 +112,7 @@ namespace QJExternalTool
 
             if (_isLock) return;
 
-	        _isLock = true;
-
-            
+	        //_isLock = true;
 
             Algorithm();
             CheckStops();
@@ -165,7 +163,7 @@ namespace QJExternalTool
                     var sellStop = _candlestickChart.LowAtSignal - Point;
                     var sellLimit = _candlestickChart.LowAtSignal - 5 * Point;
 
-                    _stringBuilder.Append("\r\nL1 Bid: " + _level1.Bid + " <= " + " Sell Stop: " + sellStop + " && Sell Limit: " + sellLimit);
+                    _stringBuilder.Append("\r\nBid: " + _level1.Bid + " <= " + " Sell Stop: " + sellStop + " && Sell Limit: " + sellLimit);
 
                     //sell;
                     if (_position.NetVolume < 0 || _level1.Bid > sellStop || _level1.Bid <= sellLimit) return;
@@ -325,7 +323,7 @@ namespace QJExternalTool
 	                _lastPrice = lastPrice;
 	                _highestBid = _level1.Bid;
 	                _lowestAsk = _level1.Ask;
-	                _isLock = false;
+	                //_isLock = false;
 	                break;
 
 	                #endregion
