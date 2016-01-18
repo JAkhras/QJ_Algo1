@@ -56,7 +56,7 @@ namespace QJExternalTool
 	    private const int FastLength = 9;
 	    private const int SlowLength = 27;
 
-	    private const int TimerInterval = 5000;
+	    private const int TimerInterval = 300000;
 
 	    private const decimal Point = 0.25m;
 
@@ -110,16 +110,12 @@ namespace QJExternalTool
 
             _candlestickChart.Update();
 
-            //if (_isLock) return;
-
-	        //_isLock = true;
-
             Algorithm();
             CheckStops();
 
 	        txbAccounts.Text = _stringBuilder.ToString();
 
-            tbxAll.AppendText("\r\nCompleted");
+
 
 	    }
 
