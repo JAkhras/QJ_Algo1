@@ -110,7 +110,7 @@ namespace QJExternalTool
 
             _candlestickChart.Update();
 
-            if (_isLock) return;
+            //if (_isLock) return;
 
 	        //_isLock = true;
 
@@ -118,6 +118,8 @@ namespace QJExternalTool
             CheckStops();
 
 	        txbAccounts.Text = _stringBuilder.ToString();
+
+            tbxAll.AppendText("\r\nCompleted");
 
 	    }
 
