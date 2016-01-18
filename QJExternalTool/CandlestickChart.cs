@@ -41,7 +41,7 @@ namespace QJExternalTool
         public decimal HighAtSignal { get; private set; }
         public decimal LowAtSignal { get; private set; }
 
-        public Signals Signal { get; private set; }
+        public Signals Signal { get; set; }
 
         public decimal Fast { get; private set; }
 
@@ -149,7 +149,7 @@ namespace QJExternalTool
             };
 
             timer.Elapsed += TimerOnTick;
-
+           
             Signal = Signals.None;
             timer.Start();
 
@@ -171,10 +171,10 @@ namespace QJExternalTool
             }
         }
 
-
+       
         private void TimerOnTick(object sender, EventArgs eventArgs)
         {
-
+            _box.AppendText("\r\nTick");
             _frequency += 5;
 
             if (!CurrentCandlestick5.IsNull)

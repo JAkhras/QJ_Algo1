@@ -56,7 +56,7 @@ namespace QJExternalTool
 	    private const int FastLength = 9;
 	    private const int SlowLength = 27;
 
-	    private const int TimerInterval = 300000;
+	    private const int TimerInterval = 5000;
 
 	    private const decimal Point = 0.25m;
 
@@ -95,6 +95,9 @@ namespace QJExternalTool
 		// This function is call when the information in the SymbolLevel1 changed.
 	    private void Level1_Level1Changed(ILevel1 level1)
 	    {
+            _stringBuilder.Clear();
+
+            _stringBuilder.Append("\r\nVolume:" + level1.Volume + "\r\n");
 
             var bid = level1.Bid;
 	        var ask = level1.Ask;
@@ -111,7 +114,7 @@ namespace QJExternalTool
 
 	        _isLock = true;
 
-            _stringBuilder.Clear();
+            
 
             Algorithm();
             CheckStops();
@@ -124,7 +127,7 @@ namespace QJExternalTool
 	    private void Algorithm()
 	    {
 	        _stringBuilder.Append("Algo running");
-
+	        _stringBuilder.Append("\r\n" + _candlestickChart.Candlesticks5.Count);
             if (_candlestickChart.Candlesticks5.Count < SlowLength)
 	            return;
 
