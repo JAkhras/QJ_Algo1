@@ -63,7 +63,7 @@ namespace QJExternalTool
         private const int MaxDrawdown = 17;
         private const int DollarProfitTarget = 40;
         private const int Earned = 20;
-	    private const int PercentDown = 16;
+	    private const int PercentDown = 25;
 
         private const int Lots = 1;
 
@@ -143,7 +143,7 @@ namespace QJExternalTool
 
                     _stringBuilder.Append("\r\nUp Trend");
 
-                    var buyStop = _candlestickChart.HighAtSignal + Point;
+                    var buyStop = _candlestickChart.HighAtSignal - 4*Point;
                     var buyLimit = _candlestickChart.HighAtSignal + 5*Point;
 
                     _stringBuilder.Append("\r\nAsk: " + _level1.Ask + " >= " + " Buy Stop: " + buyStop + " && Buy Limit: " + buyLimit);
@@ -158,7 +158,7 @@ namespace QJExternalTool
 
                     _stringBuilder.Append("\r\nDown Trend");
 
-                    var sellStop = _candlestickChart.LowAtSignal - Point;
+                    var sellStop = _candlestickChart.LowAtSignal + 4*Point;
                     var sellLimit = _candlestickChart.LowAtSignal - 5 * Point;
 
                     _stringBuilder.Append("\r\nBid: " + _level1.Bid + " <= " + " Sell Stop: " + sellStop + " && Sell Limit: " + sellLimit);

@@ -174,7 +174,6 @@ namespace QJExternalTool
        
         private void TimerOnTick(object sender, EventArgs eventArgs)
         {
-            _box.AppendText("\r\nTick");
             _frequency += 5;
 
             if (!CurrentCandlestick5.IsNull)
