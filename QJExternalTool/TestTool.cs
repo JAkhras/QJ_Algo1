@@ -182,7 +182,7 @@ namespace QJExternalTool
 	    {
 	        CheckStopLoss();
 	        CheckPercentTrailing();
-	        //CheckProfitTarget();
+	        CheckProfitTarget();
 	    }
 
 
@@ -191,12 +191,12 @@ namespace QJExternalTool
 	        if (_position.NetVolume > 0 && _level1.Bid >= _lastPrice + DollarProfitTarget*Point)
 	        {
 	            Sell(Lots, _level1.Bid, OrderTypeMarket);
-                tbxAll.AppendText("\r\nProfit Target SLD " + Lots + " at " + _lastPrice + " @ " + DateTime.Now);
+                tbxAll.AppendText("\r\nProfit Target SLD " + Lots + " at " + _lastPrice + " @ " + DateTime.Now + "Maxdrawdown:" + ((_lastPrice - _lowestAsk) * Point));
             }
 	        else if (_position.NetVolume < 0 && _level1.Ask <= _lastPrice - DollarProfitTarget*Point)
 	        {
                 Buy(Lots, _level1.Ask, OrderTypeMarket);
-                tbxAll.AppendText("\r\nProfit Target BOT " + Lots + " at " + _lastPrice + " @ " + DateTime.Now);
+                tbxAll.AppendText("\r\nProfit Target BOT " + Lots + " at " + _lastPrice + " @ " + DateTime.Now + "Maxdrawdown:" + ((_highestBid - _lastPrice) * Point));
             }
 	    }
 
@@ -214,10 +214,10 @@ namespace QJExternalTool
 
             {
                 var stop = _highestBid - PercentDown * Point;
-                _stringBuilder.Append("\r\nWill get out of LONG position at Trailing Stop: " + stop);
+                _stringBuilder.Append("\r\nWill get out of LONG position at Trailing Stop: " + stop );
                 if (_level1.Bid > stop) return;
                 Sell(Lots, _level1.Bid, OrderTypeMarket);
-                tbxAll.AppendText("\r\nTrailing Stop SLD " + Lots + " at " + _lastPrice + " @ " + DateTime.Now);
+                tbxAll.AppendText("\r\nTrailing Stop SLD " + Lots + " at " + _lastPrice + " @ " + DateTime.Now + "Maxdrawdown:" + ((_lastPrice - _lowestAsk)) * Point);
             }
 
 
@@ -227,7 +227,7 @@ namespace QJExternalTool
                 _stringBuilder.Append("\r\nWill get out of SHORT position at Trailing Stop: " + stop);
                 if (_level1.Ask < stop) return;
                 Buy(Lots, _level1.Ask, OrderTypeMarket);
-                tbxAll.AppendText("\r\nTrailing Stop BOT " + Lots + " at " + _lastPrice + " @ " + DateTime.Now);
+                tbxAll.AppendText("\r\nTrailing Stop BOT " + Lots + " at " + _lastPrice + " @ " + DateTime.Now + "Maxdrawdown:" + ((_highestBid - _lastPrice) * Point));
 
             }
 
@@ -246,7 +246,7 @@ namespace QJExternalTool
 
                 if (_level1.Bid > longStop) return;
                 Sell(Lots, _level1.Bid, OrderTypeMarket);
-                tbxAll.AppendText("\r\nStop Loss SLD " + Lots + " at " + _lastPrice + " @ " + DateTime.Now);
+                tbxAll.AppendText("\r\nStop Loss SLD " + Lots + " at " + _lastPrice + " @ " + DateTime.Now + "Maxdrawdown:" + ((_lastPrice - _lowestAsk) * Point));
             }
             else if (_position.NetVolume < 0)
             {
@@ -255,7 +255,7 @@ namespace QJExternalTool
 
                 if (_level1.Ask < shortStop) return;
                 Buy(Lots, _level1.Ask, OrderTypeMarket);
-                tbxAll.AppendText("\r\nStop Loss BOT " + Lots + " at " + _lastPrice + " @ " + DateTime.Now);
+                tbxAll.AppendText("\r\nStop Loss BOT " + Lots + " at " + _lastPrice + " @ " + DateTime.Now + "Maxdrawdown:" + ((_highestBid - _lastPrice) * Point));
             }
         }
 
