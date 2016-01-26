@@ -20,11 +20,6 @@ namespace QJExternalTool
             Candles5, Candles15, Candles60
         }
 
-        public enum Signals
-        {
-            Buy, Sell, None
-        }
-
         public List<Candlestick> Candlesticks5 { get; }
         public List<Candlestick> Candlesticks15 { get; }
         public List<Candlestick> Candlesticks60 { get; }
@@ -35,50 +30,15 @@ namespace QJExternalTool
         public Candlestick CurrentCandlestick15 { get; private set; }
         public Candlestick CurrentCandlestick60 { get; private set; }
 
-        private readonly int _fastLength;
-        private readonly int _slowLength;
-
-        public decimal HighAtSignal { get; private set; }
-        public decimal LowAtSignal { get; private set; }
-
-        public Signals Signal { get; set; }
-
-        public decimal Fast { get; private set; }
-
         private TextBox _box;
-
         private int _lastVolume;
 
-        private decimal _slow;
-        public decimal Slow
-        {
-            get { return _slow; }
-            private set
-            {
-                _slow = value;
+        private readonly Timer _timer;
 
-                var crossedUp = Fast > value && _lastFast < _lastSlow;
-                var crossedDown = Fast < value && _lastFast > _lastSlow;
-
-                if (crossedUp || crossedDown)
-                {
-                    HighAtSignal = High(CandleFrequency.Candles5, 1);
-                    LowAtSignal = Low(CandleFrequency.Candles5, 1);
-                    Signal = crossedUp ? Signals.Buy : Signals.Sell;
-
-                }
-
-                _lastFast = Fast;
-                _lastSlow = value;
-            }
-        }
-
-        private decimal _lastFast;
-        private decimal _lastSlow;
 
         private readonly ILevel1 _level1;
 
-        public CandlestickChart(string product, int timerInterval, int fastLength, int slowLength, ILevel1 level1, TextBox box)
+        public CandlestickChart(string product, int timerInterval, int slowLength, ILevel1 level1, TextBox box)
         {
 
             
@@ -86,10 +46,6 @@ namespace QJExternalTool
             _level1 = level1;
 
             _lastVolume = _level1.Volume;
-
-            _fastLength = fastLength;
-            _slowLength = slowLength;
-
 
             Candlesticks5 = new List<Candlestick>();
             Candlesticks15 = new List<Candlestick>();
@@ -107,7 +63,7 @@ namespace QJExternalTool
 
             var excelRange = excelWorksheet.Range["K3", "N29"];
 
-            for (var i = 1; i <= _slowLength; ++i)
+            for (var i = 1; i <= slowLength; ++i)
             {
 
                 var candlestick5 = new Candlestick()
@@ -137,21 +93,16 @@ namespace QJExternalTool
             CurrentCandlestick15 = new Candlestick();
             CurrentCandlestick60 = new Candlestick();
 
-            Fast = AverageLast(Point.Close, _fastLength, CandleFrequency.Candles5);
-            Slow = AverageLast(Point.Close, _fastLength, CandleFrequency.Candles5);
 
             //Set up timer
-            var timer = new Timer
+            _timer = new Timer
             {
                 Interval = timerInterval,
                 Enabled = false,
                 AutoReset = true
             };
 
-            timer.Elapsed += TimerOnTick;
-           
-            Signal = Signals.None;
-            timer.Start();
+            _timer.Elapsed += TimerOnTick;
 
         }
 
@@ -336,10 +287,13 @@ namespace QJExternalTool
             CurrentCandlestick15.Update(last);
             CurrentCandlestick60.Update(last);
 
-            Fast = AverageLast(Point.Close, _fastLength, CandleFrequency.Candles5);
-            Slow = AverageLast(Point.Close, _slowLength, CandleFrequency.Candles5);
+
         }
 
 
+        public void Start()
+        {
+            _timer.Start();
+        }
     }
 }
