@@ -40,8 +40,7 @@ namespace QJExternalTool
 
         public CandlestickChart(string product, int timerInterval, int slowLength, ILevel1 level1, TextBox box)
         {
-
-            
+                     
             _box = box;
             _level1 = level1;
 

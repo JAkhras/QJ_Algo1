@@ -72,7 +72,7 @@ namespace QJExternalTool
 
 	    private const int TimerInterval = 300000;
 
-	    private decimal _point;
+	    private readonly decimal _point;
 
         private const int MaxDrawdown = 17;
         private const int DollarProfitTarget = 40;
