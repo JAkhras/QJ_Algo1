@@ -154,15 +154,24 @@ namespace QJExternalTool
 
 	        if (_trade != null)
 	        {
-	            _trade.Drawdown = (_highestBid - _lastPrice)*_point;
-	            _stringBuilder.Append("Current Trade - Position: " + _trade.Position + " Open Price: " + _trade.OpenPrice +
+                if (_trade.Position > 0)
+	                _trade.Drawdown = (_highestBid - _lastPrice)*_point;
+                else if (_trade.Position < 0)
+                {
+                    //opposite
+                }
+
+
+                _stringBuilder.Append("Current Trade - Position: " + _trade.Position + " Open Price: " + _trade.OpenPrice +
 	                                  " @ " + _trade.OpenedAt + " | Drawdown: " + _trade.Drawdown);
 	        }
 	        else
 	            _stringBuilder.Append("No current trade");
 
 	        Algorithm();
-            CheckStops();
+
+            if (_orderState == OrderStateEnum.FILLED)
+                CheckStops();
 
 	        txbAccounts.Text = _stringBuilder.ToString();
 
@@ -334,6 +343,7 @@ namespace QJExternalTool
 
 	    private void CreateOrder(SideEnum sideEnum, int size, decimal price, string orderType)
 	    {
+            _orderState = OrderStateEnum.NO_ORDER;
             _canCheckForTrailingStop = false;
             _signal = Signals.None;
 
@@ -363,29 +373,12 @@ namespace QJExternalTool
 
 	        switch (execReport.OrdStatus)
 	        {
-	                #region New
-
-	            case '0': // New
-	                // Outstanding order with no executions.
-	                _orderState = OrderStateEnum.NEW;
-	                break;
-
-	                #endregion
-
-	                #region Partially filled
-
-	            case '1': // Partially filled
-	                // Outstanding order with executions and remaining quantity.
-	                _orderState = OrderStateEnum.PARTIALLY_FILLED;
-	                break;
-
-	                #endregion
 
 	                #region Filled
 
 	            case '2': // Filled
 	                // Order completely filled, no remaining quantity.
-	                _orderState = OrderStateEnum.FILLED;
+
 
 	                if (_trade != null)
 	                {
@@ -401,126 +394,12 @@ namespace QJExternalTool
 	                _lastPrice = lastPrice;
 	                _highestBid = _level1.Bid;
 	                _lowestAsk = _level1.Ask;
-	                break;
+
+                    _orderState = OrderStateEnum.FILLED;
+
+                    break;
 
 	                #endregion
-
-	                #region Done for day
-
-	            case '3': // Done for day
-	                // Order not, or partially, filled;  no further executions forthcoming for the trading day.
-	                _orderState = OrderStateEnum.DONE_FOR_THE_DAY;
-	                break;
-
-	                #endregion
-
-	                #region Canceled
-
-	            case '4': // Canceled
-	                // Canceled order with or without executions.
-	                _orderState = OrderStateEnum.CANCELED;
-	                break;
-
-	                #endregion
-
-	                #region Replaced
-
-	            case '5': // Replaced
-	                // Replaced order with or without executions.
-	                _orderState = OrderStateEnum.REPLACE;
-	                break;
-
-	                #endregion
-
-	                #region Pending Cancel
-
-	            case '6': // Pending Cancel
-	                // Order with an Order Cancel Request pending, used to confirm receipt of an Order Cancel Request.
-	                // DOES NOT INDICATE THAT THE ORDER HAS BEEN CANCELED.
-	                _orderState = OrderStateEnum.PENDING_CANCEL;
-	                break;
-
-	                #endregion
-
-	                #region Stopped
-
-	            case '7': // Stopped
-	                // Order has been stopped at the exchange. Used when guranteeing or protecting a price and quantity.
-	                _orderState = OrderStateEnum.STOPPED;
-	                break;
-
-	                #endregion
-
-	                #region Rejected
-
-	            case '8': // Rejected
-	                // Order has been rejected by broker.
-	                // NOTE:  An order can be rejected subsequent to order acknowledgment,
-	                // i.e. an order can pass from New to Rejected status.
-	                _orderState = OrderStateEnum.REJECTED;
-	                break;
-
-	                #endregion
-
-	                #region Suspended
-
-	            case '9': // Suspended
-	                // Order has been placed in suspended state at the request of the client.
-	                _orderState = OrderStateEnum.SUSPENDED;
-	                break;
-
-	                #endregion
-
-	                #region Pending New
-
-	            case 'A': // Pending New
-	                // Order has been received by brokers system but not yet accepted for execution.
-	                // An execution message with this status will only be sent in response to a Status Request message.
-	                _orderState = OrderStateEnum.PENDING_NEW;
-	                break;
-
-	                #endregion
-
-	                #region Calculated
-
-	            case 'B': // Calculated
-	                // Order has been completed for the day (either filled or done for day).
-	                // Commission or currency settlement details have been calculated and reported in this execution message.
-	                _orderState = OrderStateEnum.CALCULATED;
-	                break;
-
-	                #endregion
-
-	                #region Expired
-
-	            case 'C': // Expired
-	                // Order has been canceled in broker's system due to time in force instructions.
-	                _orderState = OrderStateEnum.EXPIRED;
-	                break;
-
-	                #endregion
-
-	                #region Accepted for bidding
-
-	            case 'D': // Accepted for bidding
-	                // Order has been received and is being evaluated for pricing.
-	                // It is anticipated that this status will only be  used with the "Disclosed" BidType List Order Trading model.
-	                _orderState = OrderStateEnum.ACCEPTED_FOR_BIDDING;
-	                break;
-
-	                #endregion
-
-	                #region Pending Replace
-
-	            case 'E': // Pending Replace
-	                // Order with an Order Cancel/Replace Request pending, used to confirm receipt of an Order Cancel/Replace Request.
-	                // DOES NOT INDICATE THAT THE ORDER HAS BEEN REPLACED
-	                _orderState = OrderStateEnum.PENDING_REPLACE;
-	                break;
-
-                #endregion
-                default:
-                    throw new ArgumentOutOfRangeException();
 
 	        }
 	    }

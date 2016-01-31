@@ -12,8 +12,6 @@ namespace QJExternalTool
         public DateTime ClosedAt { get; set; }
         public decimal Drawdown { get; set; }
 
-        //Also need excel file info
-
         public Trade(decimal lastPrice, int lots, char side)
         {
             OpenPrice = lastPrice;
