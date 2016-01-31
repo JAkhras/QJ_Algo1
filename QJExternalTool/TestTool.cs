@@ -38,6 +38,8 @@ namespace QJExternalTool
 	    private bool _canCheckForTrailingStop;
 
 	    private decimal _highestBid;
+	    private decimal _lowestBid;
+	    private decimal _highestAsk;
 	    private decimal _lowestAsk;
 
 	    private readonly StringBuilder _stringBuilder;
@@ -87,7 +89,12 @@ namespace QJExternalTool
 
         #region Constructor
         public TestTool(IHost host)
-		{
+        {
+
+            _highestBid = 0;
+            _lowestBid = decimal.MaxValue;
+            _highestAsk = 0;
+            _lowestAsk = decimal.MaxValue;
 
             _stringBuilder = new StringBuilder();
 
@@ -122,14 +129,17 @@ namespace QJExternalTool
 	    {
             _stringBuilder.Clear();
 
-            _stringBuilder.Append("\r\nVolume:" + level1.Volume + "\r\n");
+            _stringBuilder.Append("\r\nVolume: " + level1.Volume + "\r\n");
 
             var bid = level1.Bid;
 	        var ask = level1.Ask;
 
             if (bid > _highestBid)
                 _highestBid = bid;
-
+	        if (bid < _lowestBid)
+	            _lowestBid = bid;
+	        if (ask > _highestAsk)
+	            _highestAsk = ask;
 	        if (ask < _lowestAsk)
 	            _lowestAsk = ask;
 
@@ -155,10 +165,10 @@ namespace QJExternalTool
 	        if (_trade != null)
 	        {
                 if (_trade.Position > 0)
-	                _trade.Drawdown = (_highestBid - _lastPrice)*_point;
+	                _trade.Drawdown = (_lastPrice - _lowestBid)*_point;
                 else if (_trade.Position < 0)
                 {
-                    //opposite
+                    _trade.Drawdown = (_highestAsk - _lastPrice)*_point;
                 }
 
 
@@ -177,7 +187,6 @@ namespace QJExternalTool
 
 	    }
         #endregion
-
 
         //Algorithm
         private void Algorithm()
@@ -202,7 +211,7 @@ namespace QJExternalTool
 
             _stringBuilder.Append("\r\nSignal: " + _signal);
 
-            //var orderSize = Lots + Lots*(_position.NetVolume == 0 ? 0 : 1);
+            var orderSize = Lots + Lots*(_position.NetVolume == 0 ? 0 : 1);
 
             switch (_signal)
             {
@@ -218,12 +227,8 @@ namespace QJExternalTool
                     //buy;
                     if (_position.NetVolume > 0 || _level1.Ask < buyStop || _level1.Ask >= buyLimit) return;
 
-                    //close existing position if any
-                    if (_trade != null)
-                        Buy(Lots, buyStop, OrderTypeMarket);
-
                     //go in new position
-                    Buy(Lots, buyStop, OrderTypeMarket);
+                    Buy(orderSize, buyStop, OrderTypeMarket);
                     tbxAll.AppendText("\r\nBOT " + Lots + " at " + _lastPrice + " @ " + DateTime.Now);
                     break;
 
@@ -239,10 +244,7 @@ namespace QJExternalTool
                     //sell;
                     if (_position.NetVolume < 0 || _level1.Bid > sellStop || _level1.Bid <= sellLimit) return;
 
-                    if (_trade != null)
-                        Sell(Lots, sellStop, OrderTypeMarket);
-
-                    Sell(Lots, sellStop, OrderTypeMarket);
+                    Sell(orderSize, sellStop, OrderTypeMarket);
                     tbxAll.AppendText("\r\nSLD " + Lots + " at " + _lastPrice + " @ " + DateTime.Now);
                     break;
 
@@ -267,27 +269,25 @@ namespace QJExternalTool
 	        if (_position.NetVolume > 0 && _level1.Bid >= _lastPrice + DollarProfitTarget*_point)
 	        {
 	            Sell(Lots, _level1.Bid, OrderTypeMarket);
-                tbxAll.AppendText("\r\nProfit Target SLD " + Lots + " at " + _lastPrice + " @ " + DateTime.Now + "Maxdrawdown:" + ((_lastPrice - _lowestAsk) * _point));
+                tbxAll.AppendText("\r\nProfit Target SLD " + Lots + " at " + _lastPrice + " @ " + DateTime.Now);
             }
 	        else if (_position.NetVolume < 0 && _level1.Ask <= _lastPrice - DollarProfitTarget*_point)
 	        {
                 Buy(Lots, _level1.Ask, OrderTypeMarket);
-                tbxAll.AppendText("\r\nProfit Target BOT " + Lots + " at " + _lastPrice + " @ " + DateTime.Now + "Maxdrawdown:" + ((_highestBid - _lastPrice) * _point));
+                tbxAll.AppendText("\r\nProfit Target BOT " + Lots + " at " + _lastPrice + " @ " + DateTime.Now);
             }
 	    }
 
         private void CheckPercentTrailing()
         {
             if (_position.NetVolume > 0 && _level1.Bid >= _lastPrice + Earned * _point ||
-                             _position.NetVolume < 0 && _level1.Ask >= _lastPrice - Earned * _point)
+                             _position.NetVolume < 0 && _level1.Ask <= _lastPrice - Earned * _point)
                 _canCheckForTrailingStop = true;
 
             if (!_canCheckForTrailingStop) return;
 
 
             if (_position.NetVolume > 0)
-             
-
             {
                 var stop = _highestBid - PercentDown * _point;
                 _stringBuilder.Append("\r\nWill get out of LONG position at Trailing Stop: " + stop );
@@ -363,7 +363,7 @@ namespace QJExternalTool
 	        //decimal price = (decimal)execReport.Price; // Price per share.
 	        //decimal averagePrice = (decimal)execReport.AvgPrice; // Calculated average price of all fills on this order.
 	        var lastPrice = (decimal) execReport.LastPx; // Price of this (last) fill.
-	        //int orderQuantity = (int)execReport.OrderQty; // Number of shares ordered.
+	        int orderQuantity = (int)execReport.OrderQty; // Number of shares ordered.
 	        //int leavesQty = (int)execReport.LeavesQty; // Amount of shares open for further execution. LeavesQty = OrderQty - CumQty.
 	        //int lastQuantity = (int)execReport.LastQty; // Quantity of shares bought/sold on this (last) fill.
 	        //int cummulativeQuantity = (int)execReport.CumQty; // Total number of shares filled.
@@ -387,6 +387,9 @@ namespace QJExternalTool
 	                    textBox1.AppendText("TRADE: Position: " + _trade.Position + " Open Price: " + _trade.OpenPrice +
                                       " @ " + _trade.OpenedAt + " | Close Price: " + _trade.ClosePrice + " @ " + _trade.ClosedAt + " | Drawdown: " + _trade.Drawdown);
 	                    _trade = null;
+
+	                    if (orderQuantity > Lots)
+	                        _trade = new Trade(lastPrice, Lots, side);
 	                }
 	                else
 	                    _trade = new Trade(lastPrice, Lots, side);
