@@ -20,25 +20,18 @@ namespace QJExternalTool
             Candles5, Candles15, Candles60
         }
 
-        public List<Candlestick> Candlesticks5 { get; }
-        public List<Candlestick> Candlesticks15 { get; }
-        public List<Candlestick> Candlesticks60 { get; }
+        public List<Candlestick> Candlesticks { get; }
 
-        private int _frequency;
-
-        public Candlestick CurrentCandlestick5 { get; private set; }
-        public Candlestick CurrentCandlestick15 { get; private set; }
-        public Candlestick CurrentCandlestick60 { get; private set; }
+        public Candlestick CurrentCandlestick { get; private set; }
 
         private TextBox _box;
         private int _lastVolume;
 
         private readonly Timer _timer;
-
-
+        
         private readonly ILevel1 _level1;
 
-        public CandlestickChart(string product, int timerInterval, int slowLength, ILevel1 level1, TextBox box)
+        public CandlestickChart(string file, string sheet, string topLeftCorner, string bottomRightCorner, int timerInterval, int slowLength, ILevel1 level1, TextBox box)
         {
                      
             _box = box;
@@ -46,26 +39,25 @@ namespace QJExternalTool
 
             _lastVolume = _level1.Volume;
 
-            Candlesticks5 = new List<Candlestick>();
-            Candlesticks15 = new List<Candlestick>();
-            Candlesticks60 = new List<Candlestick>();
+            Candlesticks = new List<Candlestick>();
 
             var excelApp = new Excel.Application {Visible = true};
 
-            var excelWorkbook = excelApp.Workbooks.Open(product,
+            var excelWorkbook = excelApp.Workbooks.Open(file,
         0, false, 5, "", "", false, Excel.XlPlatform.xlWindows, "",
         true, false, 0, true, false, false);
 
             var excelSheets = excelWorkbook.Worksheets;
 
-            var excelWorksheet = (Excel.Worksheet)excelSheets.Item["ES"];
+            var excelWorksheet = (Excel.Worksheet)excelSheets.Item[sheet];
 
-            var excelRange = excelWorksheet.Range["K3", "N29"];
+            //notice the cell numbers, change them as required
+            var excelRange = excelWorksheet.Range[topLeftCorner, bottomRightCorner];
 
             for (var i = 1; i <= slowLength; ++i)
             {
 
-                var candlestick5 = new Candlestick()
+                var candlestick = new Candlestick()
                 {
                     IsNull = false,
                     High = (decimal) ((Excel.Range) excelRange.Cells[i, 1]).Value2,
@@ -74,7 +66,7 @@ namespace QJExternalTool
                     Close = (decimal) ((Excel.Range) excelRange.Cells[i, 2]).Value2
                 };
 
-                Candlesticks5.Add(candlestick5);
+                Candlesticks.Add(candlestick);
             }
 
             excelWorkbook.Close();
@@ -84,14 +76,9 @@ namespace QJExternalTool
             ReleaseObject(excelWorkbook);
             ReleaseObject(excelApp);
 
-            Candlesticks5.Reverse();
+            Candlesticks.Reverse();
 
-            _frequency = 0;
-
-            CurrentCandlestick5 = new Candlestick();
-            CurrentCandlestick15 = new Candlestick();
-            CurrentCandlestick60 = new Candlestick();
-
+            CurrentCandlestick = new Candlestick();
 
             //Set up timer
             _timer = new Timer
@@ -124,78 +111,38 @@ namespace QJExternalTool
        
         private void TimerOnTick(object sender, EventArgs eventArgs)
         {
-            _frequency += 5;
 
-            if (!CurrentCandlestick5.IsNull)
-                Candlesticks5.Add(CurrentCandlestick5);
-            CurrentCandlestick5 = new Candlestick();
+            if (!CurrentCandlestick.IsNull)
+                Candlesticks.Add(CurrentCandlestick);
+            CurrentCandlestick = new Candlestick();
 
-
-            if (_frequency % 15 == 0)
-            {
-                if (!CurrentCandlestick15.IsNull)
-                    Candlesticks15.Add(CurrentCandlestick15);
-                CurrentCandlestick15 = new Candlestick();
-
-            }
-
-            if (_frequency != 60) return;
-            if (!CurrentCandlestick60.IsNull)
-                Candlesticks60.Add(CurrentCandlestick60);
-            CurrentCandlestick60 = new Candlestick();
-
-            _frequency = 0;
         }
 
-        public List<Candlestick> Last(int n, CandleFrequency candleFrequency)
+        public List<Candlestick> Last(int n)
         {
 
             if (n < 1)
                 return null;
 
-            Candlestick currentCandlestick;
+            var lastCandlesticks = new List<Candlestick>();
 
- 
-
-            var candlesticks = new List<Candlestick>();
-
-            List<Candlestick> candlesticksFrequency;
-
-            switch (candleFrequency)
-            {
-                case CandleFrequency.Candles5:
-                    candlesticksFrequency = Candlesticks5;
-                    currentCandlestick = CurrentCandlestick5;
-                    break;
-                case CandleFrequency.Candles15:
-                    candlesticksFrequency = Candlesticks15;
-                    currentCandlestick = CurrentCandlestick15;
-                    break;
-                case CandleFrequency.Candles60:
-                    candlesticksFrequency = Candlesticks60;
-                    currentCandlestick = CurrentCandlestick60;
-                    break;
-                default:
-                    return null;
-            }
-
-            if (!currentCandlestick.IsNull)
+            if (!CurrentCandlestick.IsNull)
                 n--;
 
-            var count = candlesticksFrequency.Count;
+            var count = Candlesticks.Count;
 
-            for (var i = count - n; i < candlesticksFrequency.Count; ++i)
-                candlesticks.Add(candlesticksFrequency[i]);
+            for (var i = count - n; i < Candlesticks.Count; ++i)
+                lastCandlesticks.Add(Candlesticks[i]);
 
-            if (!currentCandlestick.IsNull)
-                candlesticks.Add(currentCandlestick);
+            if (!CurrentCandlestick.IsNull)
+                lastCandlesticks.Add(CurrentCandlestick);
 
-            return candlesticks;
+            return lastCandlesticks;
         }
 
-        public decimal AverageLast(Point point, int n, CandleFrequency candleFrequency)
+        public decimal AverageLast(Point point, int n)
         {
-            var candlesticks = Last(n, candleFrequency);
+            var candlesticks = Last(n);
 
             switch (point)
             {
@@ -212,65 +159,13 @@ namespace QJExternalTool
             }
         }
 
-        public decimal High(CandleFrequency candleFrequency, int n)
-        {
-            switch (candleFrequency)
-            {
-                case CandleFrequency.Candles5:
-                    return (Candlesticks5[Candlesticks5.Count - n].High);
-                case CandleFrequency.Candles15:
-                    return (Candlesticks15[Candlesticks15.Count - n].High);
-                case CandleFrequency.Candles60:
-                    return (Candlesticks60[Candlesticks60.Count - n].High);
-                default:
-                    return 0;
-            }
-        }
+        public decimal High(int n) => Candlesticks[Candlesticks.Count - n].High;
 
-        public decimal Low(CandleFrequency candleFrequency, int n)
-        {
-            switch (candleFrequency)
-            {
-                case CandleFrequency.Candles5:
-                    return (Candlesticks5[Candlesticks5.Count - n].Low);
-                case CandleFrequency.Candles15:
-                    return (Candlesticks15[Candlesticks15.Count - n].Low);
-                case CandleFrequency.Candles60:
-                    return (Candlesticks60[Candlesticks60.Count - n].Low);
-                default:
-                    return 0;
-            }
-        }
+        public decimal Low(int n) => (Candlesticks[Candlesticks.Count - n].Low);
 
-        public decimal Open(CandleFrequency candleFrequency, int n)
-        {
-            switch (candleFrequency)
-            {
-                case CandleFrequency.Candles5:
-                    return (Candlesticks5[Candlesticks5.Count - n].Open);
-                case CandleFrequency.Candles15:
-                    return (Candlesticks15[Candlesticks15.Count - n].Open);
-                case CandleFrequency.Candles60:
-                    return (Candlesticks60[Candlesticks60.Count - n].Open);
-                default:
-                    return 0;
-            }
-        }
+        public decimal Open(int n) => (Candlesticks[Candlesticks.Count - n].Open);
 
-        public decimal Close(CandleFrequency candleFrequency, int n)
-        {
-            switch (candleFrequency)
-            {
-                case CandleFrequency.Candles5:
-                    return (Candlesticks5[Candlesticks5.Count - n].Close);
-                case CandleFrequency.Candles15:
-                    return (Candlesticks15[Candlesticks15.Count - n].Close);
-                case CandleFrequency.Candles60:
-                    return (Candlesticks60[Candlesticks60.Count - n].Close);
-                default:
-                    return 0;
-            }
-        }
+        public decimal Close(int n) => (Candlesticks[Candlesticks.Count - n].Close);
 
         public void Update()
         {
@@ -282,10 +177,7 @@ namespace QJExternalTool
             _lastVolume = volume;
             var last = _level1.Last;
 
-            CurrentCandlestick5.Update(last);
-            CurrentCandlestick15.Update(last);
-            CurrentCandlestick60.Update(last);
-
+            CurrentCandlestick.Update(last);
 
         }
 

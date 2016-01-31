@@ -61,7 +61,7 @@ namespace QJExternalTool
         private decimal _lastSlow;
 
         //Candlestick stuff
-        private readonly CandlestickChart _candlestickChart;
+        private readonly CandlestickChart _candlestickChart5;
 
         //Algo inputs
         private const string Product = "/ES H6.CME";
@@ -96,7 +96,7 @@ namespace QJExternalTool
             _highestAsk = 0;
             _lowestAsk = decimal.MaxValue;
 
-            _stringBuilder = new StringBuilder();
+            _stringBuilder = new StringBuilder(); //OUTPUT RELATED
 
             InitializeComponent();
 
@@ -107,14 +107,20 @@ namespace QJExternalTool
 
             _point = _level1.Tick;
 
-            _candlestickChart = new CandlestickChart(File, TimerInterval, SlowLength, _level1, tbxAll);
+            //initialize candlestickCharts here
+            //notice the first 4 values are the excel file, sheet, upper right corner of values and lower left corner of values
+            //we always need 4 columns: High, Last, Low, Open. If High is column K, then we need the last column to be N
+            //the number of the first cell should be the High of the first value you want.
+            //the number of the last cell will end up being (the amount of candlesticks you want + the number of the first cell - 1)
+            //DON'T FUCK THIS UP 
+            _candlestickChart5 = new CandlestickChart(File, "ES", "K3", "N29", TimerInterval, SlowLength, _level1, tbxAll);
 
-            _fast = _candlestickChart.AverageLast(CandlestickChart.Point.Close, FastLength, CandlestickChart.CandleFrequency.Candles5);
-            _slow = _candlestickChart.AverageLast(CandlestickChart.Point.Close, SlowLength, CandlestickChart.CandleFrequency.Candles5);
+            _fast = _candlestickChart5.AverageLast(CandlestickChart.Point.Close, FastLength);
+            _slow = _candlestickChart5.AverageLast(CandlestickChart.Point.Close, SlowLength);
 
             _signal = Signals.None;
 
-            _candlestickChart.Start();
+            _candlestickChart5.Start();
 
             _level1.Level1Changed += Level1_Level1Changed;
 
@@ -143,18 +149,19 @@ namespace QJExternalTool
 	        if (ask < _lowestAsk)
 	            _lowestAsk = ask;
 
-            _candlestickChart.Update();
+            //Update candlestickCharts here
+            _candlestickChart5.Update();
 
-            _fast = _candlestickChart.AverageLast(CandlestickChart.Point.Close, FastLength, CandlestickChart.CandleFrequency.Candles5);
-            _slow = _candlestickChart.AverageLast(CandlestickChart.Point.Close, SlowLength, CandlestickChart.CandleFrequency.Candles5);
+            _fast = _candlestickChart5.AverageLast(CandlestickChart.Point.Close, FastLength);
+            _slow = _candlestickChart5.AverageLast(CandlestickChart.Point.Close, SlowLength);
 
             var crossedUp = _fast > _slow && _lastFast < _lastSlow;
             var crossedDown = _fast <_slow && _lastFast > _lastSlow;
 
             if (crossedUp || crossedDown)
             {
-                _highAtSignal = _candlestickChart.High(CandlestickChart.CandleFrequency.Candles5, 1);
-                _lowAtSignal = _candlestickChart.Low(CandlestickChart.CandleFrequency.Candles5, 1);
+                _highAtSignal = _candlestickChart5.High(1);
+                _lowAtSignal = _candlestickChart5.Low(1);
                 _signal = crossedUp ? Signals.Buy : Signals.Sell;
 
             }
@@ -192,7 +199,7 @@ namespace QJExternalTool
         private void Algorithm()
 	    {
 	        _stringBuilder.Append("\r\nAlgo running");
-            if (_candlestickChart.Candlesticks5.Count < SlowLength)
+            if (_candlestickChart5.Candlesticks.Count < SlowLength)
 	            return;
 
             var time = DateTime.Now.Hour;
