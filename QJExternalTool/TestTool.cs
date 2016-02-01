@@ -72,8 +72,8 @@ namespace QJExternalTool
         private const string Product = "/ES H6.CME";
         private const string File = @"Z:\DATA.ES+EC1.1.xlsm";
 
-        private const int TimeStart = 19;
-	    private const int TimeDuration = 4;
+        private const int TimeStart = 9;
+	    private const int TimeDuration = 6;
 	    private const int FastLength = 9;
 	    private const int SlowLength = 27;
 
