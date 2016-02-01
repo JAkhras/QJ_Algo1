@@ -223,7 +223,7 @@ namespace QJExternalTool
 
             Algorithm();
 
-            if (_orderState == OrderStateEnum.FILLED)
+            if (_orderState == OrderStateEnum.FILLED && _position.NetVolume != 0)
                 CheckStops();
 
             #region OUTPUT
@@ -415,7 +415,7 @@ namespace QJExternalTool
                 _stringBuilder.Append("\r\nWill get out of LONG position at Stop Loss: " + longStop);
                 #endregion
 
-                if (_level1.Bid > longStop) return;
+                if (_level1.Bid < longStop) return;
                 Sell(Lots, _level1.Bid, OrderTypeMarket);
 
                 #region OUTPUT
@@ -428,7 +428,7 @@ namespace QJExternalTool
                 _stringBuilder.Append("\r\nWill get out of SHORT position at Stop Loss: " + shortStop);
                 #endregion
 
-                if (_level1.Ask < shortStop) return;
+                if (_level1.Ask > shortStop) return;
                 Buy(Lots, _level1.Ask, OrderTypeMarket);
 
                 #region OUTPUT
