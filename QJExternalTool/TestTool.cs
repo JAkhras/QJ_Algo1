@@ -77,9 +77,10 @@ namespace QJExternalTool
 	    private const int FastLength = 9;
 	    private const int SlowLength = 27;
 
-	    private const int TimerInterval = 5000;
+	    private const int TimerInterval = 300000;
 
-	    private readonly decimal _point;
+	    private const decimal Point = 0.25m;
+	    private const decimal DollarPointValue = 12.5m;
 
         private const int MaxDrawdown = 50;
         private const int DollarProfitTarget = 100;
@@ -97,7 +98,6 @@ namespace QJExternalTool
         #region Constructor
         public TestTool(IHost host)
         {
-
             _highestBid = 0;
             _lowestBid = decimal.MaxValue;
             _highestAsk = 0;
@@ -113,8 +113,6 @@ namespace QJExternalTool
 
             _position = _host.GetPosition(Product);
             _level1 = _host.GetLevel1(Product);
-
-            _point = _level1.Tick;
 
             //initialize candlestickCharts here
             //notice the first 4 values are the excel file, sheet, upper right corner of values and lower left corner of values
@@ -132,7 +130,8 @@ namespace QJExternalTool
             _percentDown = (int) Math.Round(PercentDown*marketConditionCoefficient);
 
             #region OUTPUT
-            tbxAll.AppendText("\r\nStop values for the day with coefficient: " + marketConditionCoefficient);
+            tbxAll.AppendText("\r\nCoefficient: " + marketConditionCoefficient.ToString("F"));
+            tbxAll.AppendText("\r\nPoint: " + Point);
             tbxAll.AppendText("\r\nMax drawdown: " + _maxDrawdown);
             tbxAll.AppendText("\r\nDollar profit target: " + _dollarProfitTarget);
             tbxAll.AppendText("\r\nEarned: " + _earned);
@@ -143,6 +142,7 @@ namespace QJExternalTool
             _slow = _candlestickChart5.AverageLast(CandlestickChart.Point.Close, SlowLength);
 
             _signal = Signals.None;
+            _orderState = OrderStateEnum.FILLED;
 
             _candlestickChart5.Start();
 
@@ -205,10 +205,10 @@ namespace QJExternalTool
             if (_trade != null)
 	        {
                 if (_trade.Position > 0)
-	                _trade.Drawdown = (_lastPrice - _lowestBid)*_point;
+	                _trade.Drawdown = (_lastPrice - _lowestBid)*Point*DollarPointValue;
                 else if (_trade.Position < 0)
                 {
-                    _trade.Drawdown = (_highestAsk - _lastPrice)*_point;
+                    _trade.Drawdown = (_highestAsk - _lastPrice)*Point*DollarPointValue;
                 }
 
                 #region OUTPUT
@@ -221,12 +221,14 @@ namespace QJExternalTool
             _stringBuilder.Append(currentTradeOutput);
             #endregion
 
-            Algorithm();
+	        if (_orderState == OrderStateEnum.FILLED)
+	        {
+                Algorithm();
+                if (_position.NetVolume != 0)
+	                CheckStops();
+	        }
 
-            if (_orderState == OrderStateEnum.FILLED && _position.NetVolume != 0)
-                CheckStops();
-
-            #region OUTPUT
+	        #region OUTPUT
             txbAccounts.Text = _stringBuilder.ToString();
             #endregion
 
@@ -270,8 +272,8 @@ namespace QJExternalTool
             {
                 case Signals.Buy:
 
-                    var buyStop = _highAtSignal - 4*_point;
-                    var buyLimit = _highAtSignal + 5*_point;
+                    var buyStop = _highAtSignal - 4*Point;
+                    var buyLimit = _highAtSignal + 5*Point;
 
                     #region OUTPUT
 
@@ -287,7 +289,7 @@ namespace QJExternalTool
 
                     #region OUTPUT
 
-                    tbxAll.AppendText("\r\nBOT " + Lots + " at " + _lastPrice + " @ " + DateTime.Now);
+                    tbxAll.AppendText("\r\nBOT " + orderSize + " at " + _lastPrice + " @ " + DateTime.Now);
 
                     #endregion
 
@@ -295,8 +297,8 @@ namespace QJExternalTool
 
                 case Signals.Sell:
 
-                    var sellStop = _lowAtSignal + 4*_point;
-                    var sellLimit = _lowAtSignal - 5 * _point;
+                    var sellStop = _lowAtSignal + 4*Point;
+                    var sellLimit = _lowAtSignal - 5 * Point;
 
                     #region OUTPUT
                     _stringBuilder.Append("\r\nBid: " + _level1.Bid + " <= " + " Sell Stop: " + sellStop + " && Sell Limit: " + sellLimit);
@@ -308,7 +310,7 @@ namespace QJExternalTool
                     Sell(orderSize, sellStop, OrderTypeMarket);
 
                     #region OUTPUT
-                    tbxAll.AppendText("\r\nSLD " + Lots + " at " + _lastPrice + " @ " + DateTime.Now);
+                    tbxAll.AppendText("\r\nSLD " + orderSize + " at " + _lastPrice + " @ " + DateTime.Now);
                     #endregion
                     break;
 
@@ -331,8 +333,8 @@ namespace QJExternalTool
 	    private void CheckProfitTarget()
 	    {
 
-	        var longProfitTarget = _lastPrice + _dollarProfitTarget*_point;
-	        var shortProfitTarget = _lastPrice - _dollarProfitTarget*_point;
+	        var longProfitTarget = _lastPrice + _dollarProfitTarget*Point;
+	        var shortProfitTarget = _lastPrice - _dollarProfitTarget*Point;
 
             #region OUTPUT
             _stringBuilder.Append("\r\nWill hit PROFIT TARGET at: " + (_position.NetVolume > 0 ? longProfitTarget : shortProfitTarget));
@@ -357,8 +359,8 @@ namespace QJExternalTool
         private void CheckPercentTrailing()
         {
 
-            var longEarned = _lastPrice + _earned*_point;
-            var shortEarned = _lastPrice - _earned*_point;
+            var longEarned = _lastPrice + _earned*Point;
+            var shortEarned = _lastPrice - _earned*Point;
 
             if (_position.NetVolume > 0 && _level1.Bid >= longEarned ||
                              _position.NetVolume < 0 && _level1.Ask <= shortEarned)
@@ -374,7 +376,7 @@ namespace QJExternalTool
 
             if (_position.NetVolume > 0)
             {
-                var stop = _highestBid - _percentDown * _point;
+                var stop = _highestBid - _percentDown * Point;
 
                 #region OUTPUT
                 _stringBuilder.Append("\r\nWill get out of LONG position at Trailing Stop: " + stop );
@@ -391,7 +393,7 @@ namespace QJExternalTool
 
             else if (_position.NetVolume < 0)
             {
-                var stop = _lowestAsk + _percentDown * _point;
+                var stop = _lowestAsk + _percentDown * Point;
                 #region OUTPUT
                 _stringBuilder.Append("\r\nWill get out of SHORT position at Trailing Stop: " + stop);
                 #endregion OUTPUT
@@ -406,8 +408,8 @@ namespace QJExternalTool
 
         private void CheckStopLoss()
         {
-            var longStop = _lastPrice - _maxDrawdown * _point;
-            var shortStop = _lastPrice + _maxDrawdown * _point;
+            var longStop = _lastPrice - _maxDrawdown * Point;
+            var shortStop = _lastPrice + _maxDrawdown * Point;
 
             if (_position.NetVolume > 0)
             {
@@ -415,7 +417,7 @@ namespace QJExternalTool
                 _stringBuilder.Append("\r\nWill get out of LONG position at Stop Loss: " + longStop);
                 #endregion
 
-                if (_level1.Bid < longStop) return;
+                if (_level1.Bid > longStop) return;
                 Sell(Lots, _level1.Bid, OrderTypeMarket);
 
                 #region OUTPUT
@@ -428,7 +430,7 @@ namespace QJExternalTool
                 _stringBuilder.Append("\r\nWill get out of SHORT position at Stop Loss: " + shortStop);
                 #endregion
 
-                if (_level1.Ask > shortStop) return;
+                if (_level1.Ask < shortStop) return;
                 Buy(Lots, _level1.Ask, OrderTypeMarket);
 
                 #region OUTPUT
@@ -487,8 +489,8 @@ namespace QJExternalTool
 	                    _trade.ClosePrice = lastPrice;
 	                    _trade.ClosedAt = DateTime.Now;
 
-                        textBox1.AppendText("TRADE: Position: " + _trade.Position + " Open Price: " + _trade.OpenPrice +
-                                      " @ " + _trade.OpenedAt + " | Close Price: " + _trade.ClosePrice + " @ " + _trade.ClosedAt + " | Drawdown: " + _trade.Drawdown);
+                        textBox1.AppendText("TRADE: Position: " + _trade.Position + " | Open Price: " + _trade.OpenPrice +
+                                      " @ " + _trade.OpenedAt + " | Close Price: " + _trade.ClosePrice + " @ " + _trade.ClosedAt + " | Drawdown: " + _trade.Drawdown + "\r\n");
 
                         _trade = null;
 
@@ -512,5 +514,9 @@ namespace QJExternalTool
 	    }
         #endregion
 
+        private void textBox1_TextChanged(object sender, EventArgs e)
+        {
+
+        }
     }
 }
