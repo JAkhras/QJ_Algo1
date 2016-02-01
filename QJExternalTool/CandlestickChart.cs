@@ -31,6 +31,8 @@ namespace QJExternalTool
         
         private readonly ILevel1 _level1;
 
+        public decimal MarketConditionCoefficient { get; private set; }
+
         public CandlestickChart(string file, string sheet, string topLeftCorner, string bottomRightCorner, int timerInterval, int slowLength, ILevel1 level1, TextBox box)
         {
                      
@@ -68,6 +70,9 @@ namespace QJExternalTool
 
                 Candlesticks.Add(candlestick);
             }
+
+            excelRange = excelWorksheet.Range["Y2", "Y2"];
+            MarketConditionCoefficient = (decimal) ((Excel.Range) excelRange.Cells[1,1]).Value2;
 
             excelWorkbook.Close();
             excelApp.Quit();

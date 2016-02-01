@@ -60,6 +60,11 @@ namespace QJExternalTool
         private decimal _lastFast;
         private decimal _lastSlow;
 
+        private readonly int _maxDrawdown;
+        private readonly int _dollarProfitTarget;
+        private readonly int _earned;
+        private readonly int _percentDown;
+
         //Candlestick stuff
         private readonly CandlestickChart _candlestickChart5;
 
@@ -67,19 +72,19 @@ namespace QJExternalTool
         private const string Product = "/ES H6.CME";
         private const string File = @"Z:\DATA.ES+EC1.1.xlsm";
 
-        private const int TimeStart = 9;
-	    private const int TimeDuration = 14;
+        private const int TimeStart = 19;
+	    private const int TimeDuration = 4;
 	    private const int FastLength = 9;
 	    private const int SlowLength = 27;
 
-	    private const int TimerInterval = 300000;
+	    private const int TimerInterval = 5000;
 
 	    private readonly decimal _point;
 
-        private const int MaxDrawdown = 17;
-        private const int DollarProfitTarget = 40;
-        private const int Earned = 20;
-	    private const int PercentDown = 25;
+        private const int MaxDrawdown = 50;
+        private const int DollarProfitTarget = 100;
+        private const int Earned = 50;
+        private const int PercentDown = 25;
 
         private const int Lots = 1;
 
@@ -118,6 +123,21 @@ namespace QJExternalTool
             //the number of the last cell will end up being (the amount of candlesticks you want + the number of the first cell - 1)
             //DON'T FUCK THIS UP 
             _candlestickChart5 = new CandlestickChart(File, "ES", "K3", "N29", TimerInterval, SlowLength, _level1, tbxAll);
+
+            var marketConditionCoefficient = _candlestickChart5.MarketConditionCoefficient;
+
+            _maxDrawdown = (int) Math.Round(MaxDrawdown*marketConditionCoefficient);
+            _dollarProfitTarget = (int) Math.Round(DollarProfitTarget*marketConditionCoefficient);
+            _earned = (int) Math.Round(Earned*marketConditionCoefficient);
+            _percentDown = (int) Math.Round(PercentDown*marketConditionCoefficient);
+
+            #region OUTPUT
+            tbxAll.AppendText("\r\nStop values for the day with coefficient: " + marketConditionCoefficient);
+            tbxAll.AppendText("\r\nMax drawdown: " + _maxDrawdown);
+            tbxAll.AppendText("\r\nDollar profit target: " + _dollarProfitTarget);
+            tbxAll.AppendText("\r\nEarned: " + _earned);
+            tbxAll.AppendText("\r\nPercent down: " + _percentDown);
+            #endregion
 
             _fast = _candlestickChart5.AverageLast(CandlestickChart.Point.Close, FastLength);
             _slow = _candlestickChart5.AverageLast(CandlestickChart.Point.Close, SlowLength);
@@ -311,8 +331,8 @@ namespace QJExternalTool
 	    private void CheckProfitTarget()
 	    {
 
-	        var longProfitTarget = _lastPrice + DollarProfitTarget*_point;
-	        var shortProfitTarget = _lastPrice - DollarProfitTarget*_point;
+	        var longProfitTarget = _lastPrice + _dollarProfitTarget*_point;
+	        var shortProfitTarget = _lastPrice - _dollarProfitTarget*_point;
 
             #region OUTPUT
             _stringBuilder.Append("\r\nWill hit PROFIT TARGET at: " + (_position.NetVolume > 0 ? longProfitTarget : shortProfitTarget));
@@ -337,8 +357,8 @@ namespace QJExternalTool
         private void CheckPercentTrailing()
         {
 
-            var longEarned = _lastPrice + Earned*_point;
-            var shortEarned = _lastPrice - Earned*_point;
+            var longEarned = _lastPrice + _earned*_point;
+            var shortEarned = _lastPrice - _earned*_point;
 
             if (_position.NetVolume > 0 && _level1.Bid >= longEarned ||
                              _position.NetVolume < 0 && _level1.Ask <= shortEarned)
@@ -354,7 +374,7 @@ namespace QJExternalTool
 
             if (_position.NetVolume > 0)
             {
-                var stop = _highestBid - PercentDown * _point;
+                var stop = _highestBid - _percentDown * _point;
 
                 #region OUTPUT
                 _stringBuilder.Append("\r\nWill get out of LONG position at Trailing Stop: " + stop );
@@ -371,7 +391,7 @@ namespace QJExternalTool
 
             else if (_position.NetVolume < 0)
             {
-                var stop = _lowestAsk + PercentDown * _point;
+                var stop = _lowestAsk + _percentDown * _point;
                 #region OUTPUT
                 _stringBuilder.Append("\r\nWill get out of SHORT position at Trailing Stop: " + stop);
                 #endregion OUTPUT
@@ -386,8 +406,8 @@ namespace QJExternalTool
 
         private void CheckStopLoss()
         {
-            var longStop = _lastPrice - MaxDrawdown * _point;
-            var shortStop = _lastPrice + MaxDrawdown * _point;
+            var longStop = _lastPrice - _maxDrawdown * _point;
+            var shortStop = _lastPrice + _maxDrawdown * _point;
 
             if (_position.NetVolume > 0)
             {
