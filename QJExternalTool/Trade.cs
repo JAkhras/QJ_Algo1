@@ -2,26 +2,21 @@
 
 namespace QJExternalTool
 {
-    class Trade
+    internal sealed class Trade
     {
-
-        public int Position { get; set; }
-        public decimal OpenPrice { get; set; }
+        public int Position { get; }
+        public decimal OpenPrice { get; }
         public decimal ClosePrice { get; set; }
-        public DateTime OpenedAt { get; set; }
+        public DateTime OpenedAt { get; }
         public DateTime ClosedAt { get; set; }
         public decimal Drawdown { get; set; }
 
-        public Trade(decimal lastPrice, int lots, char side)
+        public Trade(decimal lastPrice, int lots)
         {
             OpenPrice = lastPrice;
             Position = lots;
 
-            if (side == '2')
-                Position *= -1;
-
             OpenedAt = DateTime.Now;
-
         }
 
     }

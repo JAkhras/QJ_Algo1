@@ -1,31 +1,24 @@
-using System;
-
 namespace QJExternalTool
 {
-    public class Candlestick
+    public sealed class Candlestick
     {
+        internal decimal Open { get; set; }
+        internal decimal Close { get; set; }
+        internal decimal High { get; set; }
+        internal decimal Low { get; set; }
+        internal bool IsNull { get; set; }
 
-        public decimal Open { get; set; }
-        public decimal Close { get; set; }
-        public decimal High { get; set; }
-        public decimal Low { get; set; }
-        public bool IsNull { get; set; }
-        public int Year { get; set; }
-
-        public Candlestick()
+        internal Candlestick()
         {
             IsNull = true;
             Open = -1;
             Close = -1;
             High = -1;
             Low = -1;
-            Year = DateTime.Now.Year;
-
         }
 
-        public void Update(decimal last)
+        internal void Update(decimal last)
         {
-
             if (IsNull)
             {
                 IsNull = false;
@@ -34,11 +27,12 @@ namespace QJExternalTool
             }
 
             Close = last;
+
             if (last > High)
                 High = last;
+
             if (last < Low)
                 Low = last;
-
         }
     }
 }

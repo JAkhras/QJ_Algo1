@@ -2,41 +2,32 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Windows.Forms;
-using QJInterface;
 using Excel = Microsoft.Office.Interop.Excel;
 using Timer = System.Timers.Timer;
 
 namespace QJExternalTool
 {
-    public class CandlestickChart
+    internal sealed class CandlestickChart
     {
-        public enum Point
+        internal enum Point
         {
             Open, Close, High, Low
         }
 
-        public enum CandleFrequency
-        {
-            Candles5, Candles15, Candles60
-        }
+        internal List<Candlestick> Candlesticks { get; }
 
-        public List<Candlestick> Candlesticks { get; }
+        private Candlestick CurrentCandlestick { get; set; }
 
-        public Candlestick CurrentCandlestick { get; private set; }
-
-        private TextBox _box;
         private int _lastVolume;
 
         private readonly Timer _timer;
-        
+
         private readonly ILevel1 _level1;
 
-        public decimal MarketConditionCoefficient { get; private set; }
+        internal decimal MarketConditionCoefficient { get; }
 
-        public CandlestickChart(string file, string sheet, string topLeftCorner, string bottomRightCorner, int timerInterval, int slowLength, ILevel1 level1, TextBox box)
+        internal CandlestickChart(string file, string sheet, string topLeftCorner, string bottomRightCorner, int timerInterval, int slowLength, ILevel1 level1, TextBox box)
         {
-                     
-            _box = box;
             _level1 = level1;
 
             _lastVolume = _level1.Volume;
@@ -46,8 +37,8 @@ namespace QJExternalTool
             var excelApp = new Excel.Application {Visible = true};
 
             var excelWorkbook = excelApp.Workbooks.Open(file,
-        0, false, 5, "", "", false, Excel.XlPlatform.xlWindows, "",
-        true, false, 0, true, false, false);
+                                0, false, 5, "", "", false, Excel.XlPlatform.xlWindows, "",
+                                true, false, 0, true, false, false);
 
             var excelSheets = excelWorkbook.Worksheets;
 
@@ -57,19 +48,14 @@ namespace QJExternalTool
             var excelRange = excelWorksheet.Range[topLeftCorner, bottomRightCorner];
 
             for (var i = 1; i <= slowLength; ++i)
-            {
-
-                var candlestick = new Candlestick()
+                Candlesticks.Add(new Candlestick()
                 {
                     IsNull = false,
                     High = (decimal) ((Excel.Range) excelRange.Cells[i, 1]).Value2,
                     Low = (decimal) ((Excel.Range) excelRange.Cells[i, 3]).Value2,
                     Open = (decimal) ((Excel.Range) excelRange.Cells[i, 4]).Value2,
                     Close = (decimal) ((Excel.Range) excelRange.Cells[i, 2]).Value2
-                };
-
-                Candlesticks.Add(candlestick);
-            }
+                });
 
             excelRange = excelWorksheet.Range["Y2", "Y2"];
             MarketConditionCoefficient = (decimal) ((Excel.Range) excelRange.Cells[1,1]).Value2;
@@ -94,7 +80,6 @@ namespace QJExternalTool
             };
 
             _timer.Elapsed += TimerOnTick;
-
         }
 
         private static void ReleaseObject(object obj)
@@ -113,19 +98,15 @@ namespace QJExternalTool
             }
         }
 
-       
         private void TimerOnTick(object sender, EventArgs eventArgs)
         {
-
             if (!CurrentCandlestick.IsNull)
                 Candlesticks.Add(CurrentCandlestick);
             CurrentCandlestick = new Candlestick();
-
         }
 
-        public List<Candlestick> Last(int n)
+        private List<Candlestick> Last(int n)
         {
-
             if (n < 1)
                 return null;
 
@@ -136,7 +117,7 @@ namespace QJExternalTool
 
             var count = Candlesticks.Count;
 
-            for (var i = count - n; i < Candlesticks.Count; ++i)
+            for (var i = count - n; i < count; ++i)
                 lastCandlesticks.Add(Candlesticks[i]);
 
             if (!CurrentCandlestick.IsNull)
@@ -145,7 +126,7 @@ namespace QJExternalTool
             return lastCandlesticks;
         }
 
-        public decimal AverageLast(Point point, int n)
+        internal decimal AverageLast(Point point, int n)
         {
             var candlesticks = Last(n);
 
@@ -164,15 +145,11 @@ namespace QJExternalTool
             }
         }
 
-        public decimal High(int n) => Candlesticks[Candlesticks.Count - n].High;
+        internal decimal High(int n) => Candlesticks[Candlesticks.Count - n].High;
 
-        public decimal Low(int n) => (Candlesticks[Candlesticks.Count - n].Low);
+        internal decimal Low(int n) => (Candlesticks[Candlesticks.Count - n].Low);
 
-        public decimal Open(int n) => (Candlesticks[Candlesticks.Count - n].Open);
-
-        public decimal Close(int n) => (Candlesticks[Candlesticks.Count - n].Close);
-
-        public void Update()
+        internal void Update()
         {
 
             var volume = _level1.Volume;
@@ -183,13 +160,8 @@ namespace QJExternalTool
             var last = _level1.Last;
 
             CurrentCandlestick.Update(last);
-
         }
 
-
-        public void Start()
-        {
-            _timer.Start();
-        }
+        internal void Start() => _timer.Start();
     }
 }

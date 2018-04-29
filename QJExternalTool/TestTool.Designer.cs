@@ -1,6 +1,6 @@
 ﻿namespace QJExternalTool
 {
-	partial class TestTool
+	internal sealed partial class TestTool
 	{
 		/// <summary>
 		/// Required designer variable.
